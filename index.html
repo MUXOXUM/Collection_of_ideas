@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>> ASCII 3D</title>
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/ascii.css">
+    <link rel="stylesheet" href="styles/controls.css">
+    <link rel="stylesheet" href="styles/themes-modal.css">
+</head>
+<body>
+    <div class="container">
+        <div class="title-box">
+            <h1>ASCII 3D Animation</h1>
+        </div>
+        
+        <div class="content">
+            <div id="ascii-object" class="ascii-container"></div>
+            
+            <div class="controls">
+                <div id="object-selection" class="object-selection">
+                    <h3>Select Object</h3>
+                    <div class="object-options">
+                        <div class="object-option" data-object="torus">
+                            <span class="selector">></span>
+                            <span>Torus</span>
+                        </div>
+                        <div class="object-option" data-object="octahedron">
+                            <span class="selector">></span>
+                            <span>Octahedron</span>
+                        </div>
+                        <div class="object-option" data-object="cube">
+                            <span class="selector">></span>
+                            <span>Cube</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="render-controls" class="render-controls" style="display: none;">
+                    <h3>RENDER CONTROL PANEL</h3>
+                    <div class="control-group">
+                        <label>
+                            <span>Torus Thickness:</span>
+                            <span id="r1-value" class="slider-value">0.8</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="r1-slider" min="0.3" max="1.5" step="0.1" value="0.8">
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Torus Size:</span>
+                            <span id="r2-value" class="slider-value">1.5</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="r2-slider" min="0.8" max="3" step="0.1" value="1.5">
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Observer Distance:</span>
+                            <span id="k2-value" class="slider-value">7</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="k2-slider" min="1" max="30" step="1" value="7">
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Scale:</span>
+                            <span id="k1-value" class="slider-value">100</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="k1-slider" min="10" max="200" step="5" value="100">
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Animation Speed:</span>
+                            <span id="speed-value" class="slider-value">10</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="speed-slider" min="1" max="10" step="1" value="10">
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>
+                            <span>Resolution:</span>
+                            <span id="resolution-value" class="slider-value">0.015</span>
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="resolution-slider" min="0.01" max="0.05" step="0.005" value=".015">
+                        </div>
+                    </div>
+                    
+                    <button id="reset-button" class="button">Reset Parameters</button>
+                    <button id="back-button" class="button">Back to Object Selection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Color selection modal window -->
+    <div id="color-modal" class="modal">
+        <div class="modal-content">
+            <h2>Select Interface Color</h2>
+            <div class="color-options">
+                <div class="color-option" data-color="green">
+                    <span class="selector">></span>
+                    <span>Green</span>
+                </div>
+                <div class="color-option" data-color="blue">
+                    <span class="selector">></span>
+                    <span>Blue</span>
+                </div>
+                <div class="color-option" data-color="purple">
+                    <span class="selector">></span>
+                    <span>Purple</span>
+                </div>
+                <div class="color-option" data-color="yellow">
+                    <span class="selector">></span>
+                    <span>Yellow</span>
+                </div>
+                <div class="color-option" data-color="red">
+                    <span class="selector">></span>
+                    <span>Red</span>
+                </div>
+            </div>
+            <button id="close-modal" class="button">Close</button>
+        </div>
+    </div>
+
+    <script src="scripts/render_engine.js"></script>
+    <script src="scripts/torus.js"></script>
+    <script src="scripts/octahedron.js"></script>
+    <script src="scripts/cube.js"></script>
+    <script src="scripts/main.js"></script>
+    <script src="scripts/modal_color.js"></script>
+</body>
+</html>

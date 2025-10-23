@@ -1,0 +1,90 @@
+/* === themes-modal.css === */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+.modal-content {
+    background-color: var(--bg-color, #001100);
+    margin: 10% auto;
+    padding: 25px;
+    border: 2px solid var(--border-color, #0a0);
+    width: 90%;
+    max-width: 450px;
+    text-align: center;
+    color: var(--main-color, #0f0);
+}
+.modal-content h2 {
+    margin-bottom: 20px;
+    font-size: 18px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color, #0a0);
+    padding-bottom: 10px;
+}
+.color-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.color-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+}
+.color-option:hover,
+.color-option.selected {
+    background-color: var(--hover-color, #005500);
+    border: 1px solid var(--border-color, #0a0);
+}
+.selector {
+    color: var(--main-color, #0f0);
+    font-weight: bold;
+    opacity: 0;
+    width: 15px;
+    display: inline-block;
+}
+.color-option.selected .selector,
+.color-option:hover .selector {
+    opacity: 1;
+}
+body.green-theme {
+    --main-color: #0f0;
+    --border-color: #0a0;
+    --bg-color: #001100;
+    --hover-color: #005500;
+    --slider-bg: #003300;
+}
+body.blue-theme {
+    --main-color: #00f;
+    --border-color: #00a;
+    --bg-color: #000011;
+    --hover-color: #000055;
+    --slider-bg: #000033;
+}
+body.purple-theme {
+    --main-color: #a0f;
+    --border-color: #80a;
+    --bg-color: #110011;
+    --hover-color: #550055;
+    --slider-bg: #330033;
+}
+body.yellow-theme {
+    --main-color: #ff0;
+    --border-color: #aa0;
+    --bg-color: #111100;
+    --hover-color: #555500;
+    --slider-bg: #333300;
+}
+body.red-theme {
+    --main-color: #f00;
+    --border-color: #a00;
+    --bg-color: #110000;
+    --hover-color: #550000;
+    --slider-bg: #330000;
+}
