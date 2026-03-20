@@ -6,11 +6,15 @@
   <title>Сборник идей</title>
   <style>
     :root {
-      --bg: #f3f6fb;
-      --card: #ffffff;
-      --text: #1f2937;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
+      --bg: #07111f;
+      --bg-deep: #0f172a;
+      --card: rgba(10, 18, 32, 0.88);
+      --card-border: rgba(148, 163, 184, 0.16);
+      --text: #e5eefc;
+      --muted: #9cb1cc;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --status-bg: rgba(148, 163, 184, 0.14);
     }
 
     * {
@@ -22,7 +26,7 @@
       min-height: 100vh;
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       color: var(--text);
-      background: linear-gradient(160deg, #e2e8f0 0%, var(--bg) 45%, #dbeafe 100%);
+      background: linear-gradient(160deg, #040814 0%, var(--bg) 50%, var(--bg-deep) 100%);
       display: grid;
       place-items: center;
       padding: 24px;
@@ -32,9 +36,11 @@
       width: 100%;
       max-width: 680px;
       background: var(--card);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(18px);
       border-radius: 16px;
       padding: 32px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      box-shadow: 0 24px 60px rgba(2, 6, 23, 0.48);
     }
 
     h1 {
@@ -45,7 +51,7 @@
     p {
       margin: 0 0 24px;
       line-height: 1.5;
-      color: #475569;
+      color: var(--muted);
     }
 
     .projects {
@@ -53,12 +59,32 @@
       gap: 12px;
     }
 
+    .projects[data-loading="true"]::before,
+    .projects[data-empty="true"]::before {
+      display: block;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--status-bg);
+      color: var(--muted);
+      text-align: center;
+      font-weight: 500;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .projects[data-loading="true"]::before {
+      content: "Ищу проекты...";
+    }
+
+    .projects[data-empty="true"]::before {
+      content: "Проекты с index.html не найдены.";
+    }
+
     .project-link {
       display: inline-block;
       text-align: center;
       text-decoration: none;
       background: var(--accent);
-      color: #fff;
+      color: #03111f;
       padding: 12px 16px;
       border-radius: 10px;
       font-weight: 600;
@@ -74,11 +100,44 @@
 <body>
   <main class="container">
     <h1>Сборник идей</h1>
-    <p>Здесь собраны мои мини-проекты. Выберите нужный проект:</p>
-    <div class="projects">
-      <a class="project-link" href="ASCII_3D/index.html">ASCII 3D</a>
-      <a class="project-link" href="24_clock/index.html">24 Clock</a>
-    </div>
+    <p>Здесь собраны мои мини-проекты.</p>
+    <div class="projects" data-loading="true"></div>
   </main>
+  <script src="./projects.js"></script>
+  <script>
+    const projectsContainer = document.querySelector(".projects");
+
+    function renderProjects(projects) {
+      projectsContainer.innerHTML = "";
+      projectsContainer.removeAttribute("data-loading");
+
+      if (!projects.length) {
+        projectsContainer.setAttribute("data-empty", "true");
+        return;
+      }
+
+      projectsContainer.removeAttribute("data-empty");
+
+      for (const project of projects) {
+        const link = document.createElement("a");
+        link.className = "project-link";
+        link.href = project.path;
+        link.textContent = project.title;
+        projectsContainer.append(link);
+      }
+    }
+
+    function findProjects() {
+      try {
+        const projects = Array.isArray(window.PROJECTS) ? window.PROJECTS : [];
+        renderProjects(Array.isArray(projects) ? projects : []);
+      } catch (error) {
+        console.error(error);
+        renderProjects([]);
+      }
+    }
+
+    findProjects();
+  </script>
 </body>
 </html>
