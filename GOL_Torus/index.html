@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GOL Torus</title>
+  <style>
+    :root {
+      --bg: #060b14;
+      --panel: rgba(8, 15, 28, 0.8);
+      --panel-border: rgba(148, 163, 184, 0.18);
+      --text: #e5edf8;
+      --muted: #96a6bf;
+      --accent: #9bdaf1;
+      --accent-strong: #72e2ff;
+      --dead: #8f97a3;
+      --dead-outline: rgba(210, 218, 230, 0.18);
+      --alive-a: #6be3ff;
+      --alive-b: #b7f58b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(63, 94, 251, 0.12), transparent 35%),
+        radial-gradient(circle at bottom, rgba(103, 232, 249, 0.12), transparent 30%),
+        linear-gradient(180deg, #02050c, var(--bg));
+      overflow: hidden;
+    }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(300px, 380px) 1fr;
+    }
+
+    .panel {
+      padding: 28px;
+      background: var(--panel);
+      border-right: 1px solid var(--panel-border);
+      backdrop-filter: blur(18px);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      z-index: 2;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3vw, 2.7rem);
+      line-height: 0.95;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 0.98rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary {
+      color: #021018;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    }
+
+    .secondary {
+      color: var(--text);
+      background: rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .stats,
+    .tips {
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.46);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .stats p,
+    .tips p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(148, 163, 184, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .metric-label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-value {
+      font-size: 1.7rem;
+      font-weight: 700;
+    }
+
+    .scene {
+      position: relative;
+      min-height: 100vh;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    canvas.dragging {
+      cursor: grabbing;
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      .panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      .scene {
+        min-height: 58vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="panel">
+      <h1>GoL Torus</h1>
+      <p class="lead">
+        Серый тор ждёт запуска. После нажатия игра жизни случайно заселяет клетки поверхности
+        и начинает мягко вращать фигуру по всем трём осям.
+      </p>
+
+      <div class="controls">
+        <button class="primary" id="startButton">Запуск</button>
+        <button class="secondary" id="pauseButton">Пауза</button>
+        <button class="secondary" id="resetButton">Сброс</button>
+      </div>
+
+      <section class="stats">
+        <p id="statusText">Статус: ожидание запуска.</p>
+        <div class="metrics">
+          <div class="metric">
+            <span class="metric-label">Поколение</span>
+            <span class="metric-value" id="generationValue">0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Живые клетки</span>
+            <span class="metric-value" id="aliveValue">0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="tips">
+        <p>
+          Управление: тяните мышью, чтобы вручную вращать тор. Во время работы автоматика продолжает
+          медленно крутить фигуру, так что узор остаётся объёмным и живым.
+        </p>
+      </section>
+    </aside>
+
+    <main class="scene">
+      <canvas id="scene"></canvas>
+    </main>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("scene");
+    const ctx = canvas.getContext("2d");
+
+    const startButton = document.getElementById("startButton");
+    const pauseButton = document.getElementById("pauseButton");
+    const resetButton = document.getElementById("resetButton");
+    const generationValue = document.getElementById("generationValue");
+    const aliveValue = document.getElementById("aliveValue");
+    const statusText = document.getElementById("statusText");
+
+    const majorSegments = 44;
+    const minorSegments = 26;
+    const majorRadius = 170;
+    const minorRadius = 74;
+    const cameraDistance = 640;
+    const projectionScale = 760;
+    const simStepMs = 360;
+
+    const state = {
+      width: 0,
+      height: 0,
+      rotation: { x: -0.78, y: 0.3, z: 0.18 },
+      autoRotation: { x: 0, y: 0, z: 0 },
+      started: false,
+      running: false,
+      dragging: false,
+      lastPointer: { x: 0, y: 0 },
+      generation: 0,
+      accumulator: 0,
+      grid: createGrid(false)
+    };
+
+    function createGrid(fillRandom) {
+      return Array.from({ length: majorSegments }, () =>
+        Array.from({ length: minorSegments }, () => fillRandom ? Math.random() > 0.68 : false)
+      );
+    }
+
+    function randomizeGrid() {
+      state.grid = createGrid(true);
+      state.generation = 0;
+      state.started = true;
+      state.running = true;
+      state.autoRotation = { x: 0.00009, y: 0.00013, z: 0.00007 };
+      updateStats();
+      setStatus("Статус: симуляция запущена.");
+    }
+
+    function resetGrid() {
+      state.grid = createGrid(false);
+      state.generation = 0;
+      state.started = false;
+      state.running = false;
+      state.accumulator = 0;
+      state.autoRotation = { x: 0, y: 0, z: 0 };
+      state.rotation = { x: -0.78, y: 0.3, z: 0.18 };
+      updateStats();
+      setStatus("Статус: ожидание запуска.");
+    }
+
+    function setStatus(text) {
+      statusText.textContent = text;
+    }
+
+    function countAlive() {
+      let alive = 0;
+      for (const row of state.grid) {
+        for (const cell of row) {
+          if (cell) {
+            alive += 1;
+          }
+        }
+      }
+      return alive;
+    }
+
+    function updateStats() {
+      generationValue.textContent = String(state.generation);
+      aliveValue.textContent = String(countAlive());
+      pauseButton.textContent = state.running ? "Пауза" : "Продолжить";
+    }
+
+    function wrap(value, size) {
+      return (value + size) % size;
+    }
+
+    function nextGeneration() {
+      const next = createGrid(false);
+
+      for (let i = 0; i < majorSegments; i += 1) {
+        for (let j = 0; j < minorSegments; j += 1) {
+          let neighbors = 0;
+
+          for (let di = -1; di <= 1; di += 1) {
+            for (let dj = -1; dj <= 1; dj += 1) {
+              if (di === 0 && dj === 0) {
+                continue;
+              }
+
+              if (state.grid[wrap(i + di, majorSegments)][wrap(j + dj, minorSegments)]) {
+                neighbors += 1;
+              }
+            }
+          }
+
+          const alive = state.grid[i][j];
+          next[i][j] = neighbors === 3 || (alive && neighbors === 2);
+        }
+      }
+
+      state.grid = next;
+      state.generation += 1;
+      updateStats();
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      state.width = rect.width;
+      state.height = rect.height;
+      canvas.width = Math.round(rect.width * ratio);
+      canvas.height = Math.round(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function torusPoint(u, v) {
+      const cu = Math.cos(u);
+      const su = Math.sin(u);
+      const cv = Math.cos(v);
+      const sv = Math.sin(v);
+      const ring = majorRadius + minorRadius * cv;
+
+      return {
+        x: ring * cu,
+        y: ring * su,
+        z: minorRadius * sv
+      };
+    }
+
+    function torusNormal(u, v) {
+      return normalize({
+        x: Math.cos(u) * Math.cos(v),
+        y: Math.sin(u) * Math.cos(v),
+        z: Math.sin(v)
+      });
+    }
+
+    function rotatePoint(point) {
+      let { x, y, z } = point;
+
+      const cx = Math.cos(state.rotation.x);
+      const sx = Math.sin(state.rotation.x);
+      let ry = y * cx - z * sx;
+      let rz = y * sx + z * cx;
+      y = ry;
+      z = rz;
+
+      const cy = Math.cos(state.rotation.y);
+      const sy = Math.sin(state.rotation.y);
+      let rx = x * cy + z * sy;
+      rz = -x * sy + z * cy;
+      x = rx;
+      z = rz;
+
+      const cz = Math.cos(state.rotation.z);
+      const sz = Math.sin(state.rotation.z);
+      rx = x * cz - y * sz;
+      ry = x * sz + y * cz;
+
+      return { x: rx, y: ry, z };
+    }
+
+    function normalize(vector) {
+      const length = Math.hypot(vector.x, vector.y, vector.z) || 1;
+      return {
+        x: vector.x / length,
+        y: vector.y / length,
+        z: vector.z / length
+      };
+    }
+
+    function project(point) {
+      const depth = point.z + cameraDistance;
+      const scale = projectionScale / depth;
+      return {
+        x: point.x * scale + state.width / 2,
+        y: point.y * scale + state.height / 2,
+        depth
+      };
+    }
+
+    function shadeColor(base, intensity) {
+      const mix = Math.max(0, Math.min(1, intensity));
+      const r = Math.round(base[0] * mix);
+      const g = Math.round(base[1] * mix);
+      const b = Math.round(base[2] * mix);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function drawCell(cell) {
+      ctx.beginPath();
+      ctx.moveTo(cell.points[0].x, cell.points[0].y);
+      for (let index = 1; index < cell.points.length; index += 1) {
+        ctx.lineTo(cell.points[index].x, cell.points[index].y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = cell.fill;
+      ctx.fill();
+      ctx.strokeStyle = cell.stroke;
+      ctx.lineWidth = cell.lineWidth;
+      ctx.stroke();
+    }
+
+    function buildCells() {
+      const cells = [];
+      const du = (Math.PI * 2) / majorSegments;
+      const dv = (Math.PI * 2) / minorSegments;
+      const light = normalize({ x: -0.45, y: -0.9, z: 1 });
+
+      for (let i = 0; i < majorSegments; i += 1) {
+        const u = i * du;
+        const uNext = (i + 1) * du;
+
+        for (let j = 0; j < minorSegments; j += 1) {
+          const v = j * dv;
+          const vNext = (j + 1) * dv;
+          const centerU = u + du * 0.5;
+          const centerV = v + dv * 0.5;
+
+          const corners = [
+            rotatePoint(torusPoint(u, v)),
+            rotatePoint(torusPoint(uNext, v)),
+            rotatePoint(torusPoint(uNext, vNext)),
+            rotatePoint(torusPoint(u, vNext))
+          ];
+
+          const normal = rotatePoint(torusNormal(centerU, centerV));
+          const lightness = Math.max(0.12, normal.x * light.x + normal.y * light.y + normal.z * light.z);
+          const projected = corners.map(project);
+          const avgDepth = projected.reduce((sum, point) => sum + point.depth, 0) / projected.length;
+          const alive = state.grid[i][j];
+
+          const baseColor = alive ? [92, 230, 255] : [148, 154, 164];
+          const altColor = alive ? [193, 250, 139] : [186, 192, 201];
+          const mix = 0.65 + lightness * 0.5;
+          const fill = shadeColor([
+            Math.round(baseColor[0] * 0.72 + altColor[0] * 0.28),
+            Math.round(baseColor[1] * 0.72 + altColor[1] * 0.28),
+            Math.round(baseColor[2] * 0.72 + altColor[2] * 0.28)
+          ], mix);
+
+          cells.push({
+            points: projected,
+            fill,
+            stroke: alive ? "rgba(212, 255, 255, 0.3)" : "rgba(210, 218, 230, 0.12)",
+            lineWidth: alive ? 1.15 : 0.75,
+            depth: avgDepth
+          });
+        }
+      }
+
+      cells.sort((a, b) => b.depth - a.depth);
+      return cells;
+    }
+
+    function drawBackground() {
+      const gradient = ctx.createRadialGradient(
+        state.width * 0.62,
+        state.height * 0.35,
+        20,
+        state.width * 0.52,
+        state.height * 0.52,
+        Math.max(state.width, state.height) * 0.7
+      );
+      gradient.addColorStop(0, "rgba(34, 211, 238, 0.08)");
+      gradient.addColorStop(0.4, "rgba(15, 23, 42, 0.14)");
+      gradient.addColorStop(1, "rgba(2, 6, 12, 0.92)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, state.width, state.height);
+    }
+
+    function render() {
+      drawBackground();
+      const cells = buildCells();
+      for (const cell of cells) {
+        drawCell(cell);
+      }
+    }
+
+    function tick(deltaMs) {
+      if (state.running) {
+        state.rotation.x += state.autoRotation.x * deltaMs;
+        state.rotation.y += state.autoRotation.y * deltaMs;
+        state.rotation.z += state.autoRotation.z * deltaMs;
+        state.accumulator += deltaMs;
+
+        while (state.accumulator >= simStepMs) {
+          state.accumulator -= simStepMs;
+          nextGeneration();
+        }
+      }
+    }
+
+    let previousFrame = performance.now();
+    function frame(now) {
+      const delta = Math.min(32, now - previousFrame);
+      previousFrame = now;
+      tick(delta);
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    startButton.addEventListener("click", () => {
+      if (!state.started) {
+        randomizeGrid();
+        return;
+      }
+
+      state.running = true;
+      state.autoRotation = { x: 0.00009, y: 0.00013, z: 0.00007 };
+      updateStats();
+      setStatus("Статус: симуляция продолжена.");
+    });
+
+    pauseButton.addEventListener("click", () => {
+      if (!state.started) {
+        return;
+      }
+
+      state.running = !state.running;
+      state.autoRotation = state.running ? { x: 0.00009, y: 0.00013, z: 0.00007 } : { x: 0, y: 0, z: 0 };
+      updateStats();
+      setStatus(state.running ? "Статус: симуляция продолжена." : "Статус: пауза.");
+    });
+
+    resetButton.addEventListener("click", resetGrid);
+
+    canvas.addEventListener("pointerdown", (event) => {
+      state.dragging = true;
+      state.lastPointer.x = event.clientX;
+      state.lastPointer.y = event.clientY;
+      canvas.classList.add("dragging");
+      canvas.setPointerCapture(event.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!state.dragging) {
+        return;
+      }
+
+      const dx = event.clientX - state.lastPointer.x;
+      const dy = event.clientY - state.lastPointer.y;
+      state.lastPointer.x = event.clientX;
+      state.lastPointer.y = event.clientY;
+
+      state.rotation.y += dx * 0.008;
+      state.rotation.x += dy * 0.008;
+    });
+
+    function stopDragging(event) {
+      state.dragging = false;
+      canvas.classList.remove("dragging");
+      if (event) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointerleave", () => {
+      state.dragging = false;
+      canvas.classList.remove("dragging");
+    });
+    canvas.addEventListener("pointercancel", stopDragging);
+
+    window.addEventListener("resize", resize);
+
+    resize();
+    updateStats();
+    render();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

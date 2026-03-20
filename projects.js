@@ -8,5 +8,10 @@ window.PROJECTS = [
     "title": "ASCII 3D",
     "folder": "ASCII_3D",
     "path": "ASCII_3D/index.html"
+  },
+  {
+    "title": "GOL Torus",
+    "folder": "GOL_Torus",
+    "path": "GOL_Torus/index.html"
   }
 ];
