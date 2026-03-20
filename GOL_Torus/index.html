@@ -6,17 +6,16 @@
   <title>GOL Torus</title>
   <style>
     :root {
-      --bg: #060b14;
-      --panel: rgba(8, 15, 28, 0.8);
-      --panel-border: rgba(148, 163, 184, 0.18);
-      --text: #e5edf8;
-      --muted: #96a6bf;
-      --accent: #9bdaf1;
-      --accent-strong: #72e2ff;
-      --dead: #8f97a3;
-      --dead-outline: rgba(210, 218, 230, 0.18);
-      --alive-a: #6be3ff;
-      --alive-b: #b7f58b;
+      --bg: #071108;
+      --bg-deep: #030704;
+      --panel: rgba(5, 16, 7, 0.9);
+      --panel-border: rgba(111, 255, 145, 0.25);
+      --text: #9affb0;
+      --muted: #5da86a;
+      --accent: #d4ff63;
+      --accent-strong: #7cff98;
+      --glass: rgba(13, 31, 15, 0.82);
+      --shadow: rgba(60, 255, 110, 0.12);
     }
 
     * {
@@ -26,83 +25,127 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: "Courier New", "Lucida Console", monospace;
       color: var(--text);
       background:
-        radial-gradient(circle at top, rgba(63, 94, 251, 0.12), transparent 35%),
-        radial-gradient(circle at bottom, rgba(103, 232, 249, 0.12), transparent 30%),
-        linear-gradient(180deg, #02050c, var(--bg));
+        radial-gradient(circle at top, rgba(119, 255, 144, 0.11), transparent 32%),
+        radial-gradient(circle at bottom, rgba(230, 255, 123, 0.08), transparent 28%),
+        linear-gradient(180deg, var(--bg-deep), var(--bg));
       overflow: hidden;
+      text-shadow: 0 0 10px rgba(122, 255, 151, 0.18);
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          180deg,
+          rgba(120, 255, 143, 0.045) 0,
+          rgba(120, 255, 143, 0.045) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+      opacity: 0.5;
+      mix-blend-mode: screen;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at center, transparent 58%, rgba(0, 0, 0, 0.38) 100%);
     }
 
     .layout {
       min-height: 100vh;
       display: grid;
-      grid-template-columns: minmax(300px, 380px) 1fr;
+      grid-template-columns: minmax(420px, 520px) 1fr;
     }
 
     .panel {
-      padding: 28px;
+      padding: 30px 32px;
       background: var(--panel);
       border-right: 1px solid var(--panel-border);
-      backdrop-filter: blur(18px);
+      backdrop-filter: blur(8px);
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 20px;
       z-index: 2;
+      box-shadow: inset -1px 0 0 rgba(212, 255, 99, 0.12), 0 0 40px rgba(0, 0, 0, 0.45);
     }
 
     h1 {
       margin: 0;
       font-size: clamp(2rem, 3vw, 2.7rem);
-      line-height: 0.95;
-      letter-spacing: 0.03em;
+      line-height: 1;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
+      color: var(--accent);
+      text-shadow: 0 0 18px rgba(212, 255, 99, 0.28);
     }
 
     .lead {
       margin: 0;
       color: var(--muted);
       line-height: 1.6;
+      max-width: 42ch;
     }
 
     .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
     }
 
     button {
-      border: 0;
-      border-radius: 999px;
-      padding: 12px 18px;
-      font-size: 0.98rem;
-      font-weight: 600;
+      border: 1px solid var(--panel-border);
+      border-radius: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 16px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       cursor: pointer;
-      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 16px rgba(100, 255, 140, 0.08);
     }
 
     button:hover {
       transform: translateY(-1px);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 24px rgba(212, 255, 99, 0.16);
     }
 
     .primary {
-      color: #021018;
+      color: #081007;
       background: linear-gradient(135deg, var(--accent), var(--accent-strong));
     }
 
     .secondary {
       color: var(--text);
-      background: rgba(148, 163, 184, 0.12);
-      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(75, 120, 78, 0.16);
     }
 
     .stats,
-    .tips {
+    .tips,
+    .console-box {
       padding: 16px 18px;
-      border-radius: 20px;
-      background: rgba(15, 23, 42, 0.46);
-      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 0;
+      background:
+        linear-gradient(180deg, rgba(17, 38, 19, 0.85), rgba(8, 18, 10, 0.9));
+      border: 1px solid rgba(111, 255, 145, 0.18);
+      box-shadow: inset 0 0 0 1px rgba(180, 255, 162, 0.04);
     }
 
     .stats p,
@@ -114,35 +157,101 @@
 
     .metrics {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 14px;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 12px;
     }
 
     .metric {
-      padding: 14px;
-      border-radius: 16px;
-      background: rgba(148, 163, 184, 0.06);
-      border: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 12px 14px;
+      border-radius: 0;
+      background: rgba(9, 22, 11, 0.84);
+      border: 1px solid rgba(111, 255, 145, 0.12);
+      display: grid;
+      grid-template-columns: minmax(120px, 180px) 1fr;
+      align-items: center;
+      gap: 12px;
     }
 
     .metric-label {
       display: block;
       font-size: 0.8rem;
       color: var(--muted);
-      margin-bottom: 8px;
+      margin-bottom: 0;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
 
     .metric-value {
-      font-size: 1.7rem;
+      font-size: 1.45rem;
       font-weight: 700;
+      color: var(--accent);
+      text-align: right;
+    }
+
+    .console-box {
+      display: grid;
+      gap: 10px;
+    }
+
+    .console-box-title {
+      color: var(--accent);
+      font-size: 0.84rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .console-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 170px) 1fr;
+      gap: 12px;
+      align-items: start;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .console-key {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .console-value {
+      color: var(--text);
+    }
+
+    .console-status {
+      color: var(--accent);
+    }
+
+    .button-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button-label::before {
+      content: ">";
+      color: currentColor;
+    }
+
+    .button-key {
+      color: rgba(8, 16, 7, 0.75);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+    }
+
+    .secondary .button-key {
+      color: var(--muted);
     }
 
     .scene {
       position: relative;
       min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(30, 72, 34, 0.1) 1px, transparent 1px),
+        linear-gradient(rgba(30, 72, 34, 0.1) 1px, transparent 1px);
+      background-size: 32px 32px;
     }
 
     canvas {
@@ -150,10 +259,30 @@
       width: 100%;
       height: 100%;
       cursor: grab;
+      filter: drop-shadow(0 0 20px rgba(98, 255, 115, 0.12));
     }
 
     canvas.dragging {
       cursor: grabbing;
+    }
+
+    .console-label {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid rgba(111, 255, 145, 0.18);
+      background: rgba(10, 25, 11, 0.82);
+      color: var(--accent);
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .console-label::before {
+      content: ">";
+      color: var(--accent-strong);
     }
 
     @media (max-width: 920px) {
@@ -171,25 +300,63 @@
         min-height: 58vh;
       }
     }
+
+    @media (max-width: 560px) {
+      .metric,
+      .console-row {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-value {
+        text-align: left;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="layout">
     <aside class="panel">
+      <div class="console-label">Retro Bio Monitor</div>
       <h1>GoL Torus</h1>
       <p class="lead">
-        Серый тор ждёт запуска. После нажатия игра жизни случайно заселяет клетки поверхности
-        и начинает мягко вращать фигуру по всем трём осям.
+        После нажатия игра жизни случайно заселяет клетки поверхности
+        и начинает вращать фигуру по всем трём осям.
+        Управление: тяните мышью, чтобы вручную вращать тор.
       </p>
 
+      <section class="console-box">
+        <div class="console-box-title">System Output</div>
+        <div class="console-row">
+          <span class="console-key">Режим</span>
+          <span class="console-value console-status" id="statusText">ожидание запуска</span>
+        </div>
+        <div class="console-row">
+          <span class="console-key">Поверхность</span>
+          <span class="console-value">тороидальная сетка с циклическими соседями</span>
+        </div>
+        <div class="console-row">
+          <span class="console-key">Управление</span>
+          <span class="console-value">drag mouse -> rotate object</span>
+        </div>
+      </section>
+
       <div class="controls">
-        <button class="primary" id="startButton">Запуск</button>
-        <button class="secondary" id="pauseButton">Пауза</button>
-        <button class="secondary" id="resetButton">Сброс</button>
+        <button class="primary" id="startButton">
+          <span class="button-label">Запуск</span>
+          <span class="button-key">RUN</span>
+        </button>
+        <button class="secondary" id="pauseButton">
+          <span class="button-label">Пауза</span>
+          <span class="button-key">HOLD</span>
+        </button>
+        <button class="secondary" id="resetButton">
+          <span class="button-label">Сброс</span>
+          <span class="button-key">INIT</span>
+        </button>
       </div>
 
       <section class="stats">
-        <p id="statusText">Статус: ожидание запуска.</p>
+        <div class="console-box-title">Telemetry</div>
         <div class="metrics">
           <div class="metric">
             <span class="metric-label">Поколение</span>
@@ -200,13 +367,6 @@
             <span class="metric-value" id="aliveValue">0</span>
           </div>
         </div>
-      </section>
-
-      <section class="tips">
-        <p>
-          Управление: тяните мышью, чтобы вручную вращать тор. Во время работы автоматика продолжает
-          медленно крутить фигуру, так что узор остаётся объёмным и живым.
-        </p>
       </section>
     </aside>
 
@@ -222,6 +382,8 @@
     const startButton = document.getElementById("startButton");
     const pauseButton = document.getElementById("pauseButton");
     const resetButton = document.getElementById("resetButton");
+    const pauseButtonLabel = pauseButton.querySelector(".button-label");
+    const pauseButtonKey = pauseButton.querySelector(".button-key");
     const generationValue = document.getElementById("generationValue");
     const aliveValue = document.getElementById("aliveValue");
     const statusText = document.getElementById("statusText");
@@ -277,7 +439,7 @@
     }
 
     function setStatus(text) {
-      statusText.textContent = text;
+      statusText.textContent = text.replace(/^Статус:\s*/i, "").replace(/\.$/, "");
     }
 
     function countAlive() {
@@ -295,7 +457,8 @@
     function updateStats() {
       generationValue.textContent = String(state.generation);
       aliveValue.textContent = String(countAlive());
-      pauseButton.textContent = state.running ? "Пауза" : "Продолжить";
+      pauseButtonLabel.textContent = state.running ? "Пауза" : "Продолжить";
+      pauseButtonKey.textContent = state.running ? "HOLD" : "CONT";
     }
 
     function wrap(value, size) {
@@ -458,8 +621,8 @@
           const avgDepth = projected.reduce((sum, point) => sum + point.depth, 0) / projected.length;
           const alive = state.grid[i][j];
 
-          const baseColor = alive ? [92, 230, 255] : [148, 154, 164];
-          const altColor = alive ? [193, 250, 139] : [186, 192, 201];
+          const baseColor = alive ? [142, 255, 128] : [130, 142, 120];
+          const altColor = alive ? [245, 255, 129] : [178, 190, 156];
           const mix = 0.65 + lightness * 0.5;
           const fill = shadeColor([
             Math.round(baseColor[0] * 0.72 + altColor[0] * 0.28),
@@ -470,7 +633,7 @@
           cells.push({
             points: projected,
             fill,
-            stroke: alive ? "rgba(212, 255, 255, 0.3)" : "rgba(210, 218, 230, 0.12)",
+            stroke: alive ? "rgba(234, 255, 153, 0.34)" : "rgba(170, 196, 159, 0.14)",
             lineWidth: alive ? 1.15 : 0.75,
             depth: avgDepth
           });
@@ -490,9 +653,9 @@
         state.height * 0.52,
         Math.max(state.width, state.height) * 0.7
       );
-      gradient.addColorStop(0, "rgba(34, 211, 238, 0.08)");
-      gradient.addColorStop(0.4, "rgba(15, 23, 42, 0.14)");
-      gradient.addColorStop(1, "rgba(2, 6, 12, 0.92)");
+      gradient.addColorStop(0, "rgba(117, 255, 132, 0.1)");
+      gradient.addColorStop(0.4, "rgba(14, 31, 15, 0.3)");
+      gradient.addColorStop(1, "rgba(3, 8, 4, 0.96)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, state.width, state.height);
     }
