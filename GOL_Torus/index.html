@@ -316,29 +316,12 @@
 <body>
   <div class="layout">
     <aside class="panel">
-      <div class="console-label">Retro Bio Monitor</div>
       <h1>GoL Torus</h1>
       <p class="lead">
         После нажатия игра жизни случайно заселяет клетки поверхности
         и начинает вращать фигуру по всем трём осям.
         Управление: тяните мышью, чтобы вручную вращать тор.
       </p>
-
-      <section class="console-box">
-        <div class="console-box-title">System Output</div>
-        <div class="console-row">
-          <span class="console-key">Режим</span>
-          <span class="console-value console-status" id="statusText">ожидание запуска</span>
-        </div>
-        <div class="console-row">
-          <span class="console-key">Поверхность</span>
-          <span class="console-value">тороидальная сетка с циклическими соседями</span>
-        </div>
-        <div class="console-row">
-          <span class="console-key">Управление</span>
-          <span class="console-value">drag mouse -> rotate object</span>
-        </div>
-      </section>
 
       <div class="controls">
         <button class="primary" id="startButton">
@@ -399,7 +382,8 @@
     const state = {
       width: 0,
       height: 0,
-      rotation: { x: -0.78, y: 0.3, z: 0.18 },
+      viewRotation: { x: -0.78, y: 0.3, z: 0 },
+      spinRotation: { x: 0, y: 0, z: 0.18 },
       autoRotation: { x: 0, y: 0, z: 0 },
       started: false,
       running: false,
@@ -433,7 +417,8 @@
       state.running = false;
       state.accumulator = 0;
       state.autoRotation = { x: 0, y: 0, z: 0 };
-      state.rotation = { x: -0.78, y: 0.3, z: 0.18 };
+      state.viewRotation = { x: -0.78, y: 0.3, z: 0 };
+      state.spinRotation = { x: 0, y: 0, z: 0.18 };
       updateStats();
       setStatus("Статус: ожидание запуска.");
     }
@@ -526,29 +511,34 @@
       });
     }
 
-    function rotatePoint(point) {
+    function applyRotation(point, rotation) {
       let { x, y, z } = point;
 
-      const cx = Math.cos(state.rotation.x);
-      const sx = Math.sin(state.rotation.x);
+      const cx = Math.cos(rotation.x || 0);
+      const sx = Math.sin(rotation.x || 0);
       let ry = y * cx - z * sx;
       let rz = y * sx + z * cx;
       y = ry;
       z = rz;
 
-      const cy = Math.cos(state.rotation.y);
-      const sy = Math.sin(state.rotation.y);
+      const cy = Math.cos(rotation.y || 0);
+      const sy = Math.sin(rotation.y || 0);
       let rx = x * cy + z * sy;
       rz = -x * sy + z * cy;
       x = rx;
       z = rz;
 
-      const cz = Math.cos(state.rotation.z);
-      const sz = Math.sin(state.rotation.z);
+      const cz = Math.cos(rotation.z || 0);
+      const sz = Math.sin(rotation.z || 0);
       rx = x * cz - y * sz;
       ry = x * sz + y * cz;
 
       return { x: rx, y: ry, z };
+    }
+
+    function rotatePoint(point) {
+      const spun = applyRotation(point, state.spinRotation);
+      return applyRotation(spun, state.viewRotation);
     }
 
     function normalize(vector) {
@@ -645,6 +635,10 @@
     }
 
     function drawBackground() {
+      ctx.clearRect(0, 0, state.width, state.height);
+      ctx.fillStyle = "rgb(3, 8, 4)";
+      ctx.fillRect(0, 0, state.width, state.height);
+
       const gradient = ctx.createRadialGradient(
         state.width * 0.62,
         state.height * 0.35,
@@ -654,8 +648,8 @@
         Math.max(state.width, state.height) * 0.7
       );
       gradient.addColorStop(0, "rgba(117, 255, 132, 0.1)");
-      gradient.addColorStop(0.4, "rgba(14, 31, 15, 0.3)");
-      gradient.addColorStop(1, "rgba(3, 8, 4, 0.96)");
+      gradient.addColorStop(0.4, "rgba(14, 31, 15, 0.18)");
+      gradient.addColorStop(1, "rgba(3, 8, 4, 0)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, state.width, state.height);
     }
@@ -670,9 +664,9 @@
 
     function tick(deltaMs) {
       if (state.running) {
-        state.rotation.x += state.autoRotation.x * deltaMs;
-        state.rotation.y += state.autoRotation.y * deltaMs;
-        state.rotation.z += state.autoRotation.z * deltaMs;
+        state.spinRotation.x += state.autoRotation.x * deltaMs;
+        state.spinRotation.y += state.autoRotation.y * deltaMs;
+        state.spinRotation.z += state.autoRotation.z * deltaMs;
         state.accumulator += deltaMs;
 
         while (state.accumulator >= simStepMs) {
@@ -734,8 +728,8 @@
       state.lastPointer.x = event.clientX;
       state.lastPointer.y = event.clientY;
 
-      state.rotation.y += dx * 0.008;
-      state.rotation.x += dy * 0.008;
+      state.viewRotation.y += dx * 0.006;
+      state.viewRotation.x += dy * 0.006;
     });
 
     function stopDragging(event) {
