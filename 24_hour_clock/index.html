@@ -11,6 +11,19 @@
         crossorigin=""
     >
     <style>
+        :root {
+            --bg-top: #1a1a1a;
+            --bg-bottom: #59595a;
+            --panel: rgba(24, 24, 24, 0.9);
+            --panel-strong: rgba(18, 18, 18, 0.96);
+            --panel-soft: rgba(36, 36, 36, 0.82);
+            --border: rgba(255, 255, 255, 0.14);
+            --text: #f2f2f2;
+            --muted: #a3a3a3;
+            --accent: #6b6b6b;
+            --accent-hover: #858585;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -19,7 +32,10 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--text);
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 30%),
+                linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -30,11 +46,8 @@
         .container {
             max-width: 800px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
             border-radius: 30px;
             padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
         .clock-wrapper {
@@ -54,36 +67,36 @@
         svg {
             width: 100%;
             height: auto;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+            filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.4));
         }
 
         .metal-ring {
-            stroke: #666;
+            stroke: #cfcfcf;
             stroke-width: 8;
             fill: none;
-            filter: drop-shadow(0 0 5px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.08));
         }
 
         .day-section {
-            fill: #fff;
-            stroke: #ddd;
+            fill: #efefef;
+            stroke: #c8c8c8;
             stroke-width: 1;
         }
 
         .night-section {
-            fill: #1a1a2e;
-            stroke: #333;
+            fill: #1a1b2f;
+            stroke: #3a3a3a;
             stroke-width: 1;
         }
 
         .hour-hand {
-            stroke: #333;
+            stroke: #202020;
             stroke-width: 4;
             stroke-linecap: round;
         }
 
         .minute-hand {
-            stroke: #666;
+            stroke: #555555;
             stroke-width: 3;
             stroke-linecap: round;
         }
@@ -95,50 +108,49 @@
         }
 
         .hour-hand-night {
-            stroke: #f8fafc;
+            stroke: #f5f5f5;
             stroke-width: 4;
             stroke-linecap: round;
         }
 
         .minute-hand-night {
-            stroke: #f1f5f9;
+            stroke: #e5e5e5;
             stroke-width: 3;
             stroke-linecap: round;
         }
 
         .center-circle {
-            fill: #666;
-            stroke: #fff;
+            fill: #8b8b8b;
+            stroke: #f5f5f5;
             stroke-width: 2;
         }
 
         .marker {
-            stroke: #999;
+            stroke: #6f6f6f;
             stroke-width: 2;
         }
 
         .marker-number {
             font-size: 12px;
-            fill: #666;
+            fill: #444444;
             text-anchor: middle;
             dominant-baseline: middle;
         }
 
         .marker-night {
-            stroke: #e2e8f0;
+            stroke: #dfdfdf;
             stroke-width: 2;
         }
 
         .marker-number-night {
             font-size: 12px;
-            fill: #f8fafc;
+            fill: #f3f3f3;
             text-anchor: middle;
             dominant-baseline: middle;
         }
 
         .time-info {
             text-align: center;
-            background: rgba(255, 255, 255, 0.8);
             padding: 20px;
             border-radius: 20px;
             width: 100%;
@@ -147,7 +159,7 @@
         .current-time {
             font-size: 2.5rem;
             font-weight: 300;
-            color: #333;
+            color: var(--text);
             margin-bottom: 15px;
             font-family: 'Courier New', monospace;
         }
@@ -167,7 +179,7 @@
 
         .sun-times span:first-child {
             font-size: 0.9rem;
-            color: #666;
+            color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -175,7 +187,7 @@
         .sun-times span:last-child {
             font-size: 1.3rem;
             font-weight: 600;
-            color: #333;
+            color: var(--text);
         }
 
         .location-control {
@@ -187,25 +199,26 @@
 
         .btn {
             padding: 10px 20px;
-            background: #666;
+            background: var(--accent);
             color: white;
             border: none;
             border-radius: 10px;
             font-size: 1rem;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: background 0.3s, transform 0.3s;
         }
 
         .btn:hover {
-            background: #444;
+            background: var(--accent-hover);
+            transform: translateY(-1px);
         }
 
         .btn-secondary {
-            background: #888;
+            background: #4d4d4d;
         }
 
         .btn-secondary:hover {
-            background: #666;
+            background: #676767;
         }
 
         .map-modal {
@@ -225,9 +238,10 @@
 
         .map-panel {
             width: min(800px, 100%);
-            background: #fff;
+            background: var(--panel-strong);
             border-radius: 16px;
             padding: 16px;
+            border: 1px solid var(--border);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
         }
 
@@ -241,7 +255,7 @@
 
         .map-header h3 {
             font-size: 1.1rem;
-            color: #1f2937;
+            color: var(--text);
             margin: 0;
         }
 
@@ -249,7 +263,7 @@
             width: 100%;
             height: 420px;
             border-radius: 12px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border);
         }
 
         .map-actions {
