@@ -62,189 +62,6 @@
         radial-gradient(circle at center, transparent 58%, rgba(0, 0, 0, 0.38) 100%);
     }
 
-    .layout {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: minmax(420px, 520px) 1fr;
-    }
-
-    .panel {
-      padding: 30px 32px;
-      background: var(--panel);
-      border-right: 1px solid var(--panel-border);
-      backdrop-filter: blur(8px);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      z-index: 2;
-      box-shadow: inset -1px 0 0 rgba(212, 255, 99, 0.12), 0 0 40px rgba(0, 0, 0, 0.45);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2rem, 3vw, 2.7rem);
-      line-height: 1;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--accent);
-      text-shadow: 0 0 18px rgba(212, 255, 99, 0.28);
-    }
-
-    .lead {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.6;
-      max-width: 42ch;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-
-    button {
-      border: 1px solid var(--panel-border);
-      border-radius: 0;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 13px 16px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      font-family: inherit;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      cursor: pointer;
-      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 16px rgba(100, 255, 140, 0.08);
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 24px rgba(212, 255, 99, 0.16);
-    }
-
-    .primary {
-      color: #081007;
-      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-    }
-
-    .secondary {
-      color: var(--text);
-      background: rgba(75, 120, 78, 0.16);
-    }
-
-    .stats,
-    .tips,
-    .console-box {
-      padding: 16px 18px;
-      border-radius: 0;
-      background:
-        linear-gradient(180deg, rgba(17, 38, 19, 0.85), rgba(8, 18, 10, 0.9));
-      border: 1px solid rgba(111, 255, 145, 0.18);
-      box-shadow: inset 0 0 0 1px rgba(180, 255, 162, 0.04);
-    }
-
-    .stats p,
-    .tips p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-
-    .metrics {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .metric {
-      padding: 12px 14px;
-      border-radius: 0;
-      background: rgba(9, 22, 11, 0.84);
-      border: 1px solid rgba(111, 255, 145, 0.12);
-      display: grid;
-      grid-template-columns: minmax(120px, 180px) 1fr;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .metric-label {
-      display: block;
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-bottom: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .metric-value {
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: var(--accent);
-      text-align: right;
-    }
-
-    .console-box {
-      display: grid;
-      gap: 10px;
-    }
-
-    .console-box-title {
-      color: var(--accent);
-      font-size: 0.84rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .console-row {
-      display: grid;
-      grid-template-columns: minmax(130px, 170px) 1fr;
-      gap: 12px;
-      align-items: start;
-      font-size: 0.92rem;
-      line-height: 1.5;
-    }
-
-    .console-key {
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .console-value {
-      color: var(--text);
-    }
-
-    .console-status {
-      color: var(--accent);
-    }
-
-    .button-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .button-label::before {
-      content: ">";
-      color: currentColor;
-    }
-
-    .button-key {
-      color: rgba(8, 16, 7, 0.75);
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-    }
-
-    .secondary .button-key {
-      color: var(--muted);
-    }
-
     .scene {
       position: relative;
       min-height: 100vh;
@@ -266,132 +83,40 @@
       cursor: grabbing;
     }
 
-    .console-label {
-      display: inline-flex;
-      width: fit-content;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 12px;
-      border: 1px solid rgba(111, 255, 145, 0.18);
-      background: rgba(10, 25, 11, 0.82);
-      color: var(--accent);
-      font-size: 0.85rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .console-label::before {
-      content: ">";
-      color: var(--accent-strong);
-    }
-
-    @media (max-width: 920px) {
-      .layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-      }
-
-      .panel {
-        border-right: 0;
-        border-bottom: 1px solid var(--panel-border);
-      }
-
-      .scene {
-        min-height: 58vh;
-      }
-    }
-
-    @media (max-width: 560px) {
-      .metric,
-      .console-row {
-        grid-template-columns: 1fr;
-      }
-
-      .metric-value {
-        text-align: left;
-      }
-    }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <aside class="panel">
-      <h1>Game of Life on Toroid</h1>
-      <p class="lead">
-        После нажатия игра жизни случайно заселяет клетки поверхности
-        и начинает вращать фигуру по всем трём осям.
-        Управление: тяните мышью, чтобы вручную вращать тор.
-      </p>
-
-      <div class="controls">
-        <button class="primary" id="startButton">
-          <span class="button-label">Запуск</span>
-          <span class="button-key">RUN</span>
-        </button>
-        <button class="secondary" id="pauseButton">
-          <span class="button-label">Пауза</span>
-          <span class="button-key">HOLD</span>
-        </button>
-        <button class="secondary" id="resetButton">
-          <span class="button-label">Сброс</span>
-          <span class="button-key">INIT</span>
-        </button>
-      </div>
-
-      <section class="stats">
-        <div class="console-box-title">Telemetry</div>
-        <div class="metrics">
-          <div class="metric">
-            <span class="metric-label">Поколение</span>
-            <span class="metric-value" id="generationValue">0</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Живые клетки</span>
-            <span class="metric-value" id="aliveValue">0</span>
-          </div>
-        </div>
-      </section>
-    </aside>
-
-    <main class="scene">
-      <canvas id="scene"></canvas>
-    </main>
-  </div>
+  <main class="scene">
+    <canvas id="scene"></canvas>
+  </main>
 
   <script>
     const canvas = document.getElementById("scene");
     const ctx = canvas.getContext("2d");
 
-    const startButton = document.getElementById("startButton");
-    const pauseButton = document.getElementById("pauseButton");
-    const resetButton = document.getElementById("resetButton");
-    const pauseButtonLabel = pauseButton.querySelector(".button-label");
-    const pauseButtonKey = pauseButton.querySelector(".button-key");
-    const generationValue = document.getElementById("generationValue");
-    const aliveValue = document.getElementById("aliveValue");
-    const statusText = document.getElementById("statusText");
-
-    const majorSegments = 44;
-    const minorSegments = 26;
-    const majorRadius = 170;
-    const minorRadius = 74;
+    const majorSegments = 72;
+    const minorSegments = 40;
+    const majorRadius = 182;
+    const minorRadius = 80;
     const cameraDistance = 640;
     const projectionScale = 760;
     const simStepMs = 800;
+    const autoRotationSpeed = { x: 0.00009, y: 0.00013, z: 0.00007 };
+    const lightDirection = normalize({ x: -0.45, y: -0.9, z: 1 });
+    const cellTemplates = createCellTemplates();
 
     const state = {
       width: 0,
       height: 0,
       viewRotation: { x: -0.78, y: 0.3, z: 0 },
       spinRotation: { x: 0, y: 0, z: 0.18 },
-      autoRotation: { x: 0, y: 0, z: 0 },
-      started: false,
-      running: false,
+      autoRotation: { ...autoRotationSpeed },
+      running: true,
       dragging: false,
       lastPointer: { x: 0, y: 0 },
       generation: 0,
       accumulator: 0,
-      grid: createGrid(false)
+      grid: []
     };
 
     function createGrid(fillRandom) {
@@ -403,47 +128,8 @@
     function randomizeGrid() {
       state.grid = createGrid(true);
       state.generation = 0;
-      state.started = true;
       state.running = true;
-      state.autoRotation = { x: 0.00009, y: 0.00013, z: 0.00007 };
-      updateStats();
-      setStatus("Статус: симуляция запущена.");
-    }
-
-    function resetGrid() {
-      state.grid = createGrid(false);
-      state.generation = 0;
-      state.started = false;
-      state.running = false;
-      state.accumulator = 0;
-      state.autoRotation = { x: 0, y: 0, z: 0 };
-      state.viewRotation = { x: -0.78, y: 0.3, z: 0 };
-      state.spinRotation = { x: 0, y: 0, z: 0.18 };
-      updateStats();
-      setStatus("Статус: ожидание запуска.");
-    }
-
-    function setStatus(text) {
-      statusText.textContent = text.replace(/^Статус:\s*/i, "").replace(/\.$/, "");
-    }
-
-    function countAlive() {
-      let alive = 0;
-      for (const row of state.grid) {
-        for (const cell of row) {
-          if (cell) {
-            alive += 1;
-          }
-        }
-      }
-      return alive;
-    }
-
-    function updateStats() {
-      generationValue.textContent = String(state.generation);
-      aliveValue.textContent = String(countAlive());
-      pauseButtonLabel.textContent = state.running ? "Пауза" : "Продолжить";
-      pauseButtonKey.textContent = state.running ? "HOLD" : "CONT";
+      state.autoRotation = { ...autoRotationSpeed };
     }
 
     function wrap(value, size) {
@@ -476,7 +162,6 @@
 
       state.grid = next;
       state.generation += 1;
-      updateStats();
     }
 
     function resize() {
@@ -509,6 +194,36 @@
         y: Math.sin(u) * Math.cos(v),
         z: Math.sin(v)
       });
+    }
+
+    function createCellTemplates() {
+      const templates = [];
+      const du = (Math.PI * 2) / majorSegments;
+      const dv = (Math.PI * 2) / minorSegments;
+
+      for (let i = 0; i < majorSegments; i += 1) {
+        const u = i * du;
+        const uNext = (i + 1) * du;
+
+        for (let j = 0; j < minorSegments; j += 1) {
+          const v = j * dv;
+          const vNext = (j + 1) * dv;
+
+          templates.push({
+            i,
+            j,
+            corners: [
+              torusPoint(u, v),
+              torusPoint(uNext, v),
+              torusPoint(uNext, vNext),
+              torusPoint(u, vNext)
+            ],
+            normal: torusNormal(u + du * 0.5, v + dv * 0.5)
+          });
+        }
+      }
+
+      return templates;
     }
 
     function applyRotation(point, rotation) {
@@ -584,50 +299,34 @@
 
     function buildCells() {
       const cells = [];
-      const du = (Math.PI * 2) / majorSegments;
-      const dv = (Math.PI * 2) / minorSegments;
-      const light = normalize({ x: -0.45, y: -0.9, z: 1 });
 
-      for (let i = 0; i < majorSegments; i += 1) {
-        const u = i * du;
-        const uNext = (i + 1) * du;
+      for (const template of cellTemplates) {
+        const corners = template.corners.map(rotatePoint);
+        const normal = rotatePoint(template.normal);
+        const lightness = Math.max(
+          0.12,
+          normal.x * lightDirection.x + normal.y * lightDirection.y + normal.z * lightDirection.z
+        );
+        const projected = corners.map(project);
+        const avgDepth = projected.reduce((sum, point) => sum + point.depth, 0) / projected.length;
+        const alive = state.grid[template.i][template.j];
 
-        for (let j = 0; j < minorSegments; j += 1) {
-          const v = j * dv;
-          const vNext = (j + 1) * dv;
-          const centerU = u + du * 0.5;
-          const centerV = v + dv * 0.5;
+        const baseColor = alive ? [142, 255, 128] : [130, 142, 120];
+        const altColor = alive ? [245, 255, 129] : [178, 190, 156];
+        const mix = 0.65 + lightness * 0.5;
+        const fill = shadeColor([
+          Math.round(baseColor[0] * 0.72 + altColor[0] * 0.28),
+          Math.round(baseColor[1] * 0.72 + altColor[1] * 0.28),
+          Math.round(baseColor[2] * 0.72 + altColor[2] * 0.28)
+        ], mix);
 
-          const corners = [
-            rotatePoint(torusPoint(u, v)),
-            rotatePoint(torusPoint(uNext, v)),
-            rotatePoint(torusPoint(uNext, vNext)),
-            rotatePoint(torusPoint(u, vNext))
-          ];
-
-          const normal = rotatePoint(torusNormal(centerU, centerV));
-          const lightness = Math.max(0.12, normal.x * light.x + normal.y * light.y + normal.z * light.z);
-          const projected = corners.map(project);
-          const avgDepth = projected.reduce((sum, point) => sum + point.depth, 0) / projected.length;
-          const alive = state.grid[i][j];
-
-          const baseColor = alive ? [142, 255, 128] : [130, 142, 120];
-          const altColor = alive ? [245, 255, 129] : [178, 190, 156];
-          const mix = 0.65 + lightness * 0.5;
-          const fill = shadeColor([
-            Math.round(baseColor[0] * 0.72 + altColor[0] * 0.28),
-            Math.round(baseColor[1] * 0.72 + altColor[1] * 0.28),
-            Math.round(baseColor[2] * 0.72 + altColor[2] * 0.28)
-          ], mix);
-
-          cells.push({
-            points: projected,
-            fill,
-            stroke: alive ? "rgba(234, 255, 153, 0.34)" : "rgba(170, 196, 159, 0.14)",
-            lineWidth: alive ? 1.15 : 0.75,
-            depth: avgDepth
-          });
-        }
+        cells.push({
+          points: projected,
+          fill,
+          stroke: alive ? "rgba(234, 255, 153, 0.34)" : "rgba(170, 196, 159, 0.14)",
+          lineWidth: alive ? 1.15 : 0.75,
+          depth: avgDepth
+        });
       }
 
       cells.sort((a, b) => b.depth - a.depth);
@@ -685,31 +384,6 @@
       requestAnimationFrame(frame);
     }
 
-    startButton.addEventListener("click", () => {
-      if (!state.started) {
-        randomizeGrid();
-        return;
-      }
-
-      state.running = true;
-      state.autoRotation = { x: 0.00009, y: 0.00013, z: 0.00007 };
-      updateStats();
-      setStatus("Статус: симуляция продолжена.");
-    });
-
-    pauseButton.addEventListener("click", () => {
-      if (!state.started) {
-        return;
-      }
-
-      state.running = !state.running;
-      state.autoRotation = state.running ? { x: 0.00009, y: 0.00013, z: 0.00007 } : { x: 0, y: 0, z: 0 };
-      updateStats();
-      setStatus(state.running ? "Статус: симуляция продолжена." : "Статус: пауза.");
-    });
-
-    resetButton.addEventListener("click", resetGrid);
-
     canvas.addEventListener("pointerdown", (event) => {
       state.dragging = true;
       state.lastPointer.x = event.clientX;
@@ -749,8 +423,8 @@
 
     window.addEventListener("resize", resize);
 
+    randomizeGrid();
     resize();
-    updateStats();
     render();
     requestAnimationFrame(frame);
   </script>

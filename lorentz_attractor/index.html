@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lorentz Attractor</title>
+  <style>
+    :root {
+      --bg: #101010;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background: var(--bg);
+    }
+  </style>
+</head>
+<body>
+  <canvas aria-hidden="true"></canvas>
+  <script>
+    const canvas = document.querySelector("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const PARTICLE_COUNT = 1400;
+    const SIGMA = 10;
+    const RHO = 28;
+    const BETA = 8 / 3;
+    const DT = 0.0025;
+    const SUBSTEPS = 4;
+    const BASE_SCALE = 15.5;
+    const TRAIL_FADE = 0.16;
+    const ESCAPE_RADIUS = 180;
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let centerX = 0;
+    let centerY = 0;
+    let scale = BASE_SCALE;
+    let time = 0;
+    let attractorOffsetX = 0;
+    let attractorOffsetY = 0;
+
+    const particles = [];
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      centerX = width / 2;
+      centerY = height / 2 - height * 0.04;
+      scale = Math.min(width, height) / BASE_SCALE;
+    }
+
+    function randomRange(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function createParticle() {
+      const distanceBias = Math.random() ** 0.55;
+      const radius = 24 + distanceBias * 66;
+      const theta = randomRange(0, Math.PI * 2);
+      const phi = Math.acos(randomRange(-1, 1));
+
+      return {
+        x: radius * Math.sin(phi) * Math.cos(theta),
+        y: radius * Math.sin(phi) * Math.sin(theta),
+        z: radius * Math.cos(phi) + randomRange(-18, 18),
+        alpha: randomRange(0.18, 0.95),
+        size: randomRange(0.7, 2.2)
+      };
+    }
+
+    function resetParticle(particle) {
+      const fresh = createParticle();
+      particle.x = fresh.x;
+      particle.y = fresh.y;
+      particle.z = fresh.z;
+      particle.alpha = fresh.alpha;
+      particle.size = fresh.size;
+    }
+
+    function seedParticles() {
+      particles.length = 0;
+      for (let i = 0; i < PARTICLE_COUNT; i += 1) {
+        particles.push(createParticle());
+      }
+    }
+
+    function buildReferencePoint(x, y, z) {
+      return { x, y, z, alpha: 1, size: 1 };
+    }
+
+    function lorenzDerivative(x, y, z) {
+      return {
+        dx: SIGMA * (y - x),
+        dy: x * (RHO - z) - y,
+        dz: x * y - BETA * z
+      };
+    }
+
+    function stepLorenz(point) {
+      const k1 = lorenzDerivative(point.x, point.y, point.z);
+      const k2 = lorenzDerivative(
+        point.x + k1.dx * DT * 0.5,
+        point.y + k1.dy * DT * 0.5,
+        point.z + k1.dz * DT * 0.5
+      );
+      const k3 = lorenzDerivative(
+        point.x + k2.dx * DT * 0.5,
+        point.y + k2.dy * DT * 0.5,
+        point.z + k2.dz * DT * 0.5
+      );
+      const k4 = lorenzDerivative(
+        point.x + k3.dx * DT,
+        point.y + k3.dy * DT,
+        point.z + k3.dz * DT
+      );
+
+      point.x += DT * (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx) / 6;
+      point.y += DT * (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy) / 6;
+      point.z += DT * (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz) / 6;
+    }
+
+    function isParticleValid(point) {
+      return Number.isFinite(point.x)
+        && Number.isFinite(point.y)
+        && Number.isFinite(point.z)
+        && Math.abs(point.x) < ESCAPE_RADIUS
+        && Math.abs(point.y) < ESCAPE_RADIUS
+        && Math.abs(point.z) < ESCAPE_RADIUS;
+    }
+
+    function project(point, spin, tilt) {
+      const cosSpin = Math.cos(spin);
+      const sinSpin = Math.sin(spin);
+      const cosTilt = Math.cos(tilt);
+      const sinTilt = Math.sin(tilt);
+
+      const x1 = point.x * cosSpin - point.z * sinSpin;
+      const z1 = point.x * sinSpin + point.z * cosSpin;
+      const y1 = point.y * cosTilt - z1 * sinTilt;
+      const z2 = point.y * sinTilt + z1 * cosTilt;
+
+      const depth = Math.max(0.18, 210 / (210 + z2 * 2.2));
+
+      return {
+        x: centerX + x1 * scale * depth * 0.4,
+        y: centerY + y1 * scale * depth * 0.4,
+        depth
+      };
+    }
+
+    function updateAttractorOffset(spin, tilt) {
+      const referencePoints = [
+        buildReferencePoint(-18, -22, 10),
+        buildReferencePoint(-18, 22, 10),
+        buildReferencePoint(18, -22, 10),
+        buildReferencePoint(18, 22, 10),
+        buildReferencePoint(0, 0, 40),
+        buildReferencePoint(0, 0, -2),
+        buildReferencePoint(-10, 0, 20),
+        buildReferencePoint(10, 0, 20)
+      ];
+
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+
+      for (let i = 0; i < referencePoints.length; i += 1) {
+        const projected = project(referencePoints[i], spin, tilt);
+        minX = Math.min(minX, projected.x);
+        maxX = Math.max(maxX, projected.x);
+        minY = Math.min(minY, projected.y);
+        maxY = Math.max(maxY, projected.y);
+      }
+
+      attractorOffsetX = centerX - (minX + maxX) / 2;
+      attractorOffsetY = centerY - (minY + maxY) / 2;
+    }
+
+    function render() {
+      const spin = 0;
+      const tilt = -0.42;
+      updateAttractorOffset(spin, tilt);
+
+      ctx.fillStyle = `rgba(16, 16, 16, ${TRAIL_FADE})`;
+      ctx.fillRect(0, 0, width, height);
+
+      const projected = [];
+
+      for (let i = 0; i < particles.length; i += 1) {
+        const particle = particles[i];
+
+        for (let step = 0; step < SUBSTEPS; step += 1) {
+          stepLorenz(particle);
+        }
+
+        if (!isParticleValid(particle)) {
+          resetParticle(particle);
+        }
+
+        projected.push({
+          ...project(particle, spin, tilt),
+          alpha: particle.alpha,
+          size: particle.size
+        });
+      }
+
+      projected.sort((a, b) => a.depth - b.depth);
+
+      for (let i = 0; i < projected.length; i += 1) {
+        const point = projected[i];
+        const radius = point.size * point.depth;
+        const x = point.x + attractorOffsetX;
+        const y = point.y + attractorOffsetY;
+
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.05 * point.alpha * point.depth})`;
+        ctx.arc(x, y, radius * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * point.alpha})`;
+        ctx.arc(x, y, Math.max(0.45, radius), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    resize();
+    seedParticles();
+    ctx.fillStyle = "#101010";
+    ctx.fillRect(0, 0, width, height);
+    window.addEventListener("resize", resize);
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
