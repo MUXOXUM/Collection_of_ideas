@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Optical Illusions</title>
+  <style>
+    :root {
+      --bg: #050505;
+      --frame: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.04), transparent 42%),
+        linear-gradient(180deg, #111111, var(--bg));
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .stage {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .illusion {
+      display: block;
+      max-width: min(92vw, 1600px);
+      max-height: 92vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      border: 1px solid var(--frame);
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+      background: #0c0c0c;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 640px) {
+      .stage {
+        padding: 12px;
+      }
+
+      .illusion {
+        max-width: 96vw;
+        max-height: 96vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <h1 class="sr-only">Коллекция оптических иллюзий</h1>
+    <img
+      class="illusion"
+      id="illusion"
+      src="./images/2023-05-24_15.43.04_680.jpeg"
+      alt="Оптическая иллюзия"
+    >
+  </main>
+
+  <script>
+    const illusions = [
+      "./images/2023-05-24_15.43.04_680.jpeg",
+      "./images/2023-05-24_15.43.27_929.jpg",
+      "./images/2023-05-24_15.43.37_640.jpg",
+      "./images/2025-08-24_22.43.38_235.webp",
+      "./images/2025-08-24_22.47.44_251.jpg",
+      "./images/2026-03-25_19.23.55_771.jpg",
+      "./images/2026-03-25_19.24.12_945.jpg",
+      "./images/2026-03-25_19.24.42_928.jpg"
+    ];
+
+    const image = document.getElementById("illusion");
+    let currentIndex = 0;
+
+    function showIllusion(index) {
+      currentIndex = (index + illusions.length) % illusions.length;
+      image.src = illusions[currentIndex];
+      image.alt = `Оптическая иллюзия ${currentIndex + 1}`;
+    }
+
+    function handleNavigation(event) {
+      if (event.repeat) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === "arrowright" || key === "d") {
+        event.preventDefault();
+        showIllusion(currentIndex + 1);
+      }
+
+      if (key === "arrowleft" || key === "a") {
+        event.preventDefault();
+        showIllusion(currentIndex - 1);
+      }
+    }
+
+    window.addEventListener("keydown", handleNavigation);
+
+    // Preload the rest of the images so page switching stays instant.
+    for (const src of illusions.slice(1)) {
+      const preload = new Image();
+      preload.src = src;
+    }
+  </script>
+</body>
+</html>
