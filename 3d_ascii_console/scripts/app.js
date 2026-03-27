@@ -8,7 +8,9 @@
   const STORAGE_KEYS = {
     console: "ascii_os_console_settings",
     figures: "ascii_os_figure_settings",
-    history: "ascii_os_command_history"
+    history: "ascii_os_command_history",
+    shell: "ascii_os_shell_screen",
+    ui: "ascii_os_ui_state"
   };
   const NAMED_COLORS = {
     green: "#00ff00",
@@ -508,6 +510,7 @@
     if (event.key === "Backspace") {
       event.preventDefault();
       state.commandInput = state.commandInput.slice(0, -1);
+      persistShellState();
       return;
     }
 
@@ -524,6 +527,7 @@
       }
       state.historyIndex = Math.max(0, state.historyIndex - 1);
       state.commandInput = state.commandHistory[state.historyIndex] || "";
+      persistShellState();
       return;
     }
 
@@ -534,12 +538,14 @@
       }
       state.historyIndex = Math.min(state.commandHistory.length, state.historyIndex + 1);
       state.commandInput = state.historyIndex === state.commandHistory.length ? "" : state.commandHistory[state.historyIndex];
+      persistShellState();
       return;
     }
 
     if (event.key.length === 1) {
       event.preventDefault();
       state.commandInput += event.key;
+      persistShellState();
     }
   }
 
@@ -560,6 +566,7 @@
     }
 
     state.commandInput = "";
+    persistShellState();
 
     if (!input) {
       trimShellBuffer();
@@ -575,12 +582,18 @@
     if (command === "render3d") {
       state.mode = "menu";
       state.menuIndex = 0;
+      persistUiState();
       return;
     }
 
     if (command === "sysinfo") {
       getSystemInfoLines().forEach((line) => state.shellLines.push(line));
       trimShellBuffer();
+      return;
+    }
+
+    if (command === "clear") {
+      clearShellScreen();
       return;
     }
 
@@ -666,11 +679,18 @@
       "| help     | show this help                       |",
       "| render3d | open figure selection                |",
       "| sysinfo  | show browser system info             |",
+      "| clear    | clear terminal text                  |",
       "| color    | change text/background colors        |",
       "| reboot   | clear saved browser data             |",
       "+----------+--------------------------------------+",
-      "usage: color <text> [background]"
     ];
+  }
+
+  function clearShellScreen() {
+    state.shellLines = [];
+    state.commandInput = "";
+    state.historyIndex = state.commandHistory.length;
+    persistShellState();
   }
 
   function getSystemInfoLines() {
@@ -756,6 +776,27 @@
       state.historyIndex = state.commandHistory.length;
     }
 
+    const storedShell = readStorageJson(STORAGE_KEYS.shell);
+    if (storedShell && typeof storedShell === "object") {
+      if (Array.isArray(storedShell.lines)) {
+        state.shellLines = storedShell.lines
+          .filter((line) => typeof line === "string")
+          .slice(-Math.max(6, state.viewportRows - 3));
+      }
+      if (typeof storedShell.input === "string") {
+        state.commandInput = storedShell.input;
+      }
+    }
+
+    const storedUi = readStorageJson(STORAGE_KEYS.ui);
+    if (storedUi && typeof storedUi === "object") {
+      const savedMenuIndex = typeof storedUi.menuIndex === "number" ? Math.floor(storedUi.menuIndex) : 0;
+      state.menuIndex = clamp(0, Math.max(0, figures.length - 1), savedMenuIndex);
+      if (storedUi.mode === "menu") {
+        state.mode = "menu";
+      }
+    }
+
     const storedFigures = readStorageJson(STORAGE_KEYS.figures);
     if (!storedFigures || typeof storedFigures !== "object") {
       return;
@@ -785,6 +826,20 @@
 
   function persistCommandHistory() {
     writeStorageJson(STORAGE_KEYS.history, state.commandHistory.slice(-10));
+  }
+
+  function persistShellState() {
+    writeStorageJson(STORAGE_KEYS.shell, {
+      lines: state.shellLines.slice(-200),
+      input: state.commandInput
+    });
+  }
+
+  function persistUiState() {
+    writeStorageJson(STORAGE_KEYS.ui, {
+      mode: state.mode === "menu" ? "menu" : "shell",
+      menuIndex: state.menuIndex
+    });
   }
 
   function persistFigureSettings() {
@@ -846,16 +901,19 @@
     if (state.shellLines.length > maxLines) {
       state.shellLines = state.shellLines.slice(state.shellLines.length - maxLines);
     }
+    persistShellState();
   }
 
   function handleMenuKeys(event) {
     if (event.key === "ArrowUp") {
       state.menuIndex = (state.menuIndex - 1 + figures.length) % figures.length;
+      persistUiState();
       return;
     }
 
     if (event.key === "ArrowDown") {
       state.menuIndex = (state.menuIndex + 1) % figures.length;
+      persistUiState();
       return;
     }
 
@@ -867,6 +925,7 @@
     if (event.key === "Escape") {
       state.mode = "shell";
       state.currentFigureId = null;
+      persistUiState();
     }
   }
 
@@ -885,6 +944,7 @@
       state.mode = "menu";
       state.currentFigureId = null;
       state.sliderIndex = 0;
+      persistUiState();
       return;
     }
 
@@ -917,6 +977,7 @@
     state.mode = "render";
     state.sliderIndex = 0;
     state.settingsVisible = false;
+    persistUiState();
     resetView();
   }
 
