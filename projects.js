@@ -16,6 +16,14 @@ window.PROJECTS = [
     "topic": "sim"
   },
   {
+    "title": "3D ASCII Console",
+    "path": "3d_ascii_console/index.html",
+    "readmePath": "3d_ascii_console/README.md",
+    "createdAt": "2026-03-27",
+    "updatedAt": "2026-03-27",
+    "topic": "sim"
+  },
+  {
     "title": "Butterfly Effect",
     "path": "butterfly_effect/index.html",
     "readmePath": "butterfly_effect/README.md",
