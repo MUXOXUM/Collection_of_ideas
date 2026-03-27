@@ -84,77 +84,34 @@
     <img
       class="illusion"
       id="illusion"
-      src=""
+      src="./images/2023-05-24_15.43.04_680.jpeg"
       alt="Оптическая иллюзия"
     >
   </main>
 
   <script>
-    const fallbackIllusions = [
+    const illusions = [
       "./images/2023-05-24_15.43.04_680.jpeg",
       "./images/2023-05-24_15.43.27_929.jpg",
-
+      "./images/2023-05-24_15.43.37_640.jpg",
+      "./images/2025-08-24_22.43.38_235.webp",
+      "./images/2025-08-24_22.47.44_251.jpg",
+      "./images/2026-03-25_19.23.55_771.jpg",
+      "./images/2026-03-25_19.24.12_945.jpg",
+      "./images/2026-03-25_19.24.42_928.jpg"
     ];
-    const imageExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 
     const image = document.getElementById("illusion");
-    let illusions = [];
     let currentIndex = 0;
 
     function showIllusion(index) {
-      if (!illusions.length) {
-        return;
-      }
-
       currentIndex = (index + illusions.length) % illusions.length;
       image.src = illusions[currentIndex];
       image.alt = `Оптическая иллюзия ${currentIndex + 1}`;
     }
 
-    async function loadIllusionsFromDirectory() {
-      const response = await fetch("./images/");
-
-      if (!response.ok) {
-        throw new Error(`Failed to read directory: ${response.status}`);
-      }
-
-      const html = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-      const discovered = [...doc.querySelectorAll('a[href]')]
-        .map((link) => link.getAttribute("href")?.trim() ?? "")
-        .filter((href) => href && !href.startsWith("?") && !href.startsWith("#"))
-        .map((href) => href.split("/").pop() ?? "")
-        .filter((fileName) => imageExtensions.test(fileName))
-        .map((fileName) => `./images/${fileName}`)
-        .sort((left, right) => left.localeCompare(right, "ru"));
-
-      if (!discovered.length) {
-        throw new Error("No images found in directory listing.");
-      }
-
-      return [...new Set(discovered)];
-    }
-
-    async function initializeGallery() {
-      try {
-        illusions = await loadIllusionsFromDirectory();
-      } catch (error) {
-        console.warn("Automatic image discovery is unavailable, using fallback list.", error);
-        illusions = fallbackIllusions;
-      }
-
-      showIllusion(0);
-
-      // Preload the rest of the images so page switching stays instant.
-      for (const src of illusions.slice(1)) {
-        const preload = new Image();
-        preload.src = src;
-      }
-    }
-
     function handleNavigation(event) {
-      if (!illusions.length || event.repeat) {
+      if (event.repeat) {
         return;
       }
 
@@ -172,7 +129,12 @@
     }
 
     window.addEventListener("keydown", handleNavigation);
-    initializeGallery();
+
+    // Preload the rest of the images so page switching stays instant.
+    for (const src of illusions.slice(1)) {
+      const preload = new Image();
+      preload.src = src;
+    }
   </script>
 </body>
 </html>

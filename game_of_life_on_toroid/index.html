@@ -24,7 +24,12 @@
 
     body {
       margin: 0;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
       min-height: 100vh;
+      min-height: 100svh;
+      min-height: 100dvh;
       font-family: "Courier New", "Lucida Console", monospace;
       color: var(--text);
       background:
@@ -64,7 +69,12 @@
 
     .scene {
       position: relative;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
       min-height: 100vh;
+      min-height: 100svh;
+      min-height: 100dvh;
       background:
         linear-gradient(90deg, rgba(30, 72, 34, 0.1) 1px, transparent 1px),
         linear-gradient(rgba(30, 72, 34, 0.1) 1px, transparent 1px);
@@ -75,12 +85,26 @@
       display: block;
       width: 100%;
       height: 100%;
+      min-height: 100%;
       cursor: grab;
       filter: drop-shadow(0 0 20px rgba(98, 255, 115, 0.12));
     }
 
     canvas.dragging {
       cursor: grabbing;
+    }
+
+    @media (orientation: portrait) {
+      body {
+        background:
+          radial-gradient(circle at top, rgba(119, 255, 144, 0.14), transparent 42%),
+          radial-gradient(circle at bottom, rgba(230, 255, 123, 0.1), transparent 34%),
+          linear-gradient(180deg, var(--bg-deep), var(--bg));
+      }
+
+      .scene {
+        background-size: 24px 24px;
+      }
     }
 
   </style>
@@ -96,10 +120,10 @@
 
     const majorSegments = 72;
     const minorSegments = 40;
-    const majorRadius = 182;
-    const minorRadius = 80;
-    const cameraDistance = 640;
-    const projectionScale = 760;
+    const baseMajorRadius = 182;
+    const baseMinorRadius = 80;
+    const baseCameraDistance = 640;
+    const baseProjectionScale = 760;
     const simStepMs = 800;
     const autoRotationSpeed = { x: 0.00009, y: 0.00013, z: 0.00007 };
     const lightDirection = normalize({ x: -0.45, y: -0.9, z: 1 });
@@ -116,7 +140,13 @@
       lastPointer: { x: 0, y: 0 },
       generation: 0,
       accumulator: 0,
-      grid: []
+      grid: [],
+      sceneMetrics: {
+        majorRadius: baseMajorRadius,
+        minorRadius: baseMinorRadius,
+        cameraDistance: baseCameraDistance,
+        projectionScale: baseProjectionScale
+      }
     };
 
     function createGrid(fillRandom) {
@@ -167,14 +197,25 @@
     function resize() {
       const rect = canvas.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
+      const shortestSide = Math.min(rect.width, rect.height);
+      const isPortrait = rect.height > rect.width;
+      const scale = Math.max(0.68, Math.min(1.12, shortestSide / 390));
+
       state.width = rect.width;
       state.height = rect.height;
+      state.sceneMetrics = {
+        majorRadius: baseMajorRadius * (isPortrait ? scale * 0.9 : scale),
+        minorRadius: baseMinorRadius * (isPortrait ? scale * 0.92 : scale),
+        cameraDistance: baseCameraDistance * (isPortrait ? 0.95 : 1),
+        projectionScale: baseProjectionScale * (isPortrait ? scale * 0.82 : scale)
+      };
       canvas.width = Math.round(rect.width * ratio);
       canvas.height = Math.round(rect.height * ratio);
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
 
     function torusPoint(u, v) {
+      const { majorRadius, minorRadius } = state.sceneMetrics;
       const cu = Math.cos(u);
       const su = Math.sin(u);
       const cv = Math.cos(v);
@@ -212,13 +253,13 @@
           templates.push({
             i,
             j,
-            corners: [
-              torusPoint(u, v),
-              torusPoint(uNext, v),
-              torusPoint(uNext, vNext),
-              torusPoint(u, vNext)
+            cornerAngles: [
+              { u, v },
+              { u: uNext, v },
+              { u: uNext, v: vNext },
+              { u, v: vNext }
             ],
-            normal: torusNormal(u + du * 0.5, v + dv * 0.5)
+            normalAngles: { u: u + du * 0.5, v: v + dv * 0.5 }
           });
         }
       }
@@ -266,8 +307,8 @@
     }
 
     function project(point) {
-      const depth = point.z + cameraDistance;
-      const scale = projectionScale / depth;
+      const depth = point.z + state.sceneMetrics.cameraDistance;
+      const scale = state.sceneMetrics.projectionScale / depth;
       return {
         x: point.x * scale + state.width / 2,
         y: point.y * scale + state.height / 2,
@@ -301,8 +342,8 @@
       const cells = [];
 
       for (const template of cellTemplates) {
-        const corners = template.corners.map(rotatePoint);
-        const normal = rotatePoint(template.normal);
+        const corners = template.cornerAngles.map(({ u, v }) => rotatePoint(torusPoint(u, v)));
+        const normal = rotatePoint(torusNormal(template.normalAngles.u, template.normalAngles.v));
         const lightness = Math.max(
           0.12,
           normal.x * lightDirection.x + normal.y * lightDirection.y + normal.z * lightDirection.z
