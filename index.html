@@ -107,8 +107,15 @@
       border-top: 1px solid var(--line);
     }
 
+    .project-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .project-link {
       display: inline-block;
+      min-width: 0;
       text-decoration: none;
       color: var(--text);
       font-size: 1.02rem;
@@ -117,6 +124,23 @@
     }
 
     .project-link:hover {
+      color: #ffffff;
+      opacity: 0.92;
+    }
+
+    .readme-link {
+      margin-left: auto;
+      min-width: 1.5rem;
+      text-align: right;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1;
+      transition: color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .readme-link:hover {
       color: #ffffff;
       opacity: 0.92;
     }
@@ -198,12 +222,26 @@
           const item = document.createElement("li");
           item.className = "project-item";
 
+          const row = document.createElement("div");
+          row.className = "project-row";
+
           const link = document.createElement("a");
           link.className = "project-link";
           link.href = project.path;
           link.textContent = project.title;
 
-          item.append(link);
+          row.append(link);
+
+          if (project.readmePath) {
+            const readmeLink = document.createElement("a");
+            readmeLink.className = "readme-link";
+            readmeLink.href = project.readmePath;
+            readmeLink.textContent = "?";
+            readmeLink.setAttribute("aria-label", `Открыть README проекта ${project.title}`);
+            row.append(readmeLink);
+          }
+
+          item.append(row);
           list.append(item);
         }
 
