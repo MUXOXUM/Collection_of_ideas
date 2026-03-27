@@ -5,6 +5,15 @@
   const AUTO_RESUME_MS = 0;
   const PROMPT = "root@host ~> ";
   const CARET_BLINK_MS = 530;
+  const NAMED_COLORS = {
+    green: "#00ff00",
+    blue: "#3a7bff",
+    gray: "#9a9a9a",
+    white: "#ffffff",
+    black: "#000000",
+    yellow: "#ffe066",
+    red: "#ff4d4d"
+  };
   const DRAG_BUTTON = {
     ROTATE: 0,
     PAN_MIDDLE: 1,
@@ -523,6 +532,9 @@
 
   function runCommand(rawInput) {
     const input = rawInput.trim();
+    const parts = input ? input.split(/\s+/) : [];
+    const command = parts[0] ? parts[0].toLowerCase() : "";
+    const args = parts.slice(1);
     state.shellLines.push(`${PROMPT}${rawInput}`);
 
     if (input) {
@@ -537,23 +549,72 @@
       return;
     }
 
-    if (input === "help") {
+    if (command === "help") {
       state.shellLines.push("available commands:");
       state.shellLines.push("help      - show this help");
       state.shellLines.push("render3d  - open figure selection");
+      state.shellLines.push("color     - change text/background colors");
+      state.shellLines.push("            usage: color <text> [background]");
       trimShellBuffer();
       return;
     }
 
-    if (input === "render3d") {
+    if (command === "render3d") {
       state.mode = "menu";
       state.menuIndex = 0;
+      return;
+    }
+
+    if (command === "color") {
+      handleColorCommand(args);
+      trimShellBuffer();
       return;
     }
 
     state.shellLines.push(`unknown command: ${input}`);
     state.shellLines.push("type help");
     trimShellBuffer();
+  }
+
+  function handleColorCommand(args) {
+    if (args.length < 1 || args.length > 2) {
+      state.shellLines.push("usage: color <text> [background]");
+      state.shellLines.push("colors: green blue gray white black yellow red or #RRGGBB");
+      return;
+    }
+
+    const textColor = parseColorArgument(args[0]);
+    const backgroundColor = args.length === 2 ? parseColorArgument(args[1]) : null;
+
+    if (!textColor || (args.length === 2 && !backgroundColor)) {
+      state.shellLines.push("invalid color value");
+      state.shellLines.push("colors: green blue gray white black yellow red or #RRGGBB");
+      return;
+    }
+
+    document.documentElement.style.setProperty("--text", textColor);
+    if (backgroundColor) {
+      document.documentElement.style.setProperty("--bg", backgroundColor);
+    }
+
+    state.shellLines.push(
+      args.length === 1
+        ? `text color changed to ${textColor}`
+        : `text/background changed to ${textColor} ${backgroundColor}`
+    );
+  }
+
+  function parseColorArgument(value) {
+    const normalized = value.trim().toLowerCase();
+    if (NAMED_COLORS[normalized]) {
+      return NAMED_COLORS[normalized];
+    }
+
+    if (/^#([0-9a-f]{6}|[0-9a-f]{3})$/i.test(normalized)) {
+      return normalized;
+    }
+
+    return null;
   }
 
   function trimShellBuffer() {
