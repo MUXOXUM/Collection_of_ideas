@@ -14,26 +14,29 @@
   const figures = [
     {
       id: "torus",
-      label: "torus",
+      label: "Torus",
       sliders: [
         { id: "size", label: "size", min: 0.7, max: 2.2, step: 0.1, value: 1.2 },
-        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.9 }
+        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.9 },
+        { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 }
       ]
     },
     {
       id: "cube",
-      label: "cube",
+      label: "Cube",
       sliders: [
         { id: "size", label: "size", min: 0.8, max: 2.4, step: 0.1, value: 1.35 },
-        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.8 }
+        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.8 },
+        { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 }
       ]
     },
     {
       id: "octahedron",
-      label: "octahedron",
+      label: "Octahedron",
       sliders: [
         { id: "size", label: "size", min: 0.8, max: 2.4, step: 0.1, value: 1.45 },
-        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 1.0 }
+        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 1.0 },
+        { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 }
       ]
     }
   ];
@@ -191,18 +194,24 @@
     });
 
     lines.push("");
-    lines.push("Menu controls");
-    lines.push("UP / DOWN : choose figure");
-    lines.push("ENTER     : render");
-    lines.push("ESC       : return to shell");
+    lines.push("+----------------+-------------------+");
+    lines.push("| Menu key       | Action            |");
+    lines.push("+----------------+-------------------+");
+    lines.push("| UP / DOWN      | choose figure     |");
+    lines.push("| ENTER          | render            |");
+    lines.push("| ESC            | return to shell   |");
+    lines.push("+----------------+-------------------+");
     lines.push("");
-    lines.push("Figure controls");
-    lines.push("LMB drag      : arcball rotate");
-    lines.push("RMB or MMB    : pan");
-    lines.push("wheel         : zoom");
-    lines.push("double LMB    : reset view");
-    lines.push("ESC           : close settings / leave render");
-    lines.push("M             : open settings");
+    lines.push("+----------------+-------------------+");
+    lines.push("| Figure input   | Action            |");
+    lines.push("+----------------+-------------------+");
+    lines.push("| LMB drag       | arcball rotate    |");
+    lines.push("| RMB or MMB     | pan               |");
+    lines.push("| Wheel          | zoom              |");
+    lines.push("| Double LMB     | reset view        |");
+    lines.push("| M              | open settings     |");
+    lines.push("| ESC            | close or go back  |");
+    lines.push("+----------------+-------------------+");
     return lines.join("\n");
   }
 
@@ -295,6 +304,7 @@
 
   function renderMesh(frame, mesh) {
     const size = getSliderValue("size");
+    const resolution = getRenderResolution();
     const rotation = getSceneQuaternion();
     const transformed = mesh.vertices.map((vertex) => {
       const scaled = scaleVec3(vertex, size);
@@ -319,7 +329,8 @@
         screenVerts[face[0]],
         screenVerts[face[1]],
         screenVerts[face[2]],
-        brightness
+        brightness,
+        resolution
       );
     });
 
@@ -328,12 +339,13 @@
 
   function renderTorus(frame) {
     const size = getSliderValue("size");
+    const resolution = getRenderResolution();
     const rotation = getSceneQuaternion();
     const light = normalizeVec3([0.45, 0.8, -0.6]);
     const major = 1.45 * size;
     const minor = 0.58 * size;
-    const majorSteps = Math.max(28, Math.floor(state.renderCols * 0.48));
-    const minorSteps = Math.max(18, Math.floor(state.renderRows * 0.72));
+    const majorSteps = Math.max(18, Math.floor(state.renderCols * 0.34 * resolution));
+    const minorSteps = Math.max(12, Math.floor(state.renderRows * 0.5 * resolution));
 
     for (let i = 0; i < majorSteps; i += 1) {
       const u = (i / majorSteps) * Math.PI * 2;
@@ -366,7 +378,7 @@
     return { x, y, depth };
   }
 
-  function rasterizeTriangle(frame, p0, p1, p2, brightness) {
+  function rasterizeTriangle(frame, p0, p1, p2, brightness, resolution = 1) {
     if (p0.depth <= 0 || p1.depth <= 0 || p2.depth <= 0) {
       return;
     }
@@ -381,9 +393,10 @@
       return;
     }
 
-    for (let y = minY; y <= maxY; y += 1) {
-      for (let x = minX; x <= maxX; x += 1) {
-        const sample = { x: x + 0.5, y: y + 0.5 };
+    const sampleStep = clamp(0.35, 1.8, 1.45 / resolution);
+    for (let y = minY; y <= maxY; y += sampleStep) {
+      for (let x = minX; x <= maxX; x += sampleStep) {
+        const sample = { x: x + sampleStep * 0.5, y: y + sampleStep * 0.5 };
         const w0 = edgeFunction(p1, p2, sample);
         const w1 = edgeFunction(p2, p0, sample);
         const w2 = edgeFunction(p0, p1, sample);
@@ -584,7 +597,7 @@
         state.settingsVisible = false;
         return;
       }
-      state.mode = "shell";
+      state.mode = "menu";
       state.currentFigureId = null;
       state.sliderIndex = 0;
       return;
@@ -747,6 +760,10 @@
     const figure = getCurrentFigure();
     const slider = figure.sliders.find((item) => item.id === id);
     return slider ? slider.value : 0;
+  }
+
+  function getRenderResolution() {
+    return getSliderValue("resolution") * 2;
   }
 
   function getSceneQuaternion() {
