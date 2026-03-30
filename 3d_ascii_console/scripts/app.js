@@ -37,6 +37,7 @@
         { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 },
         { id: "light_yaw", label: "l_yaw", min: -180, max: 180, step: 5, value: 35 },
         { id: "light_pitch", label: "l_pit", min: -80, max: 80, step: 5, value: 45 },
+        { id: "light_roll", label: "l_roll", min: -180, max: 180, step: 5, value: 0 },
         { id: "ambient", label: "amb", min: 0.0, max: 0.8, step: 0.05, value: 0.15 }
       ]
     },
@@ -49,6 +50,7 @@
         { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 },
         { id: "light_yaw", label: "l_yaw", min: -180, max: 180, step: 5, value: 35 },
         { id: "light_pitch", label: "l_pit", min: -80, max: 80, step: 5, value: 45 },
+        { id: "light_roll", label: "l_roll", min: -180, max: 180, step: 5, value: 0 },
         { id: "ambient", label: "amb", min: 0.0, max: 0.8, step: 0.05, value: 0.15 }
       ]
     },
@@ -61,14 +63,57 @@
         { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 },
         { id: "light_yaw", label: "l_yaw", min: -180, max: 180, step: 5, value: 35 },
         { id: "light_pitch", label: "l_pit", min: -80, max: 80, step: 5, value: 45 },
+        { id: "light_roll", label: "l_roll", min: -180, max: 180, step: 5, value: 0 },
         { id: "ambient", label: "amb", min: 0.0, max: 0.8, step: 0.05, value: 0.15 }
+      ]
+    },
+    {
+      id: "sphere",
+      label: "SPHERE",
+      sliders: [
+        { id: "size", label: "size", min: 0.8, max: 2.4, step: 0.1, value: 1.7 },
+        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.25 },
+        { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 0.9 },
+        { id: "light_yaw", label: "l_yaw", min: -180, max: 180, step: 5, value: 35 },
+        { id: "light_pitch", label: "l_pit", min: -80, max: 80, step: 5, value: 45 },
+        { id: "light_roll", label: "l_roll", min: -180, max: 180, step: 5, value: 0 },
+        { id: "ambient", label: "amb", min: 0.0, max: 0.8, step: 0.05, value: 0.2 }
+      ]
+    },
+    {
+      id: "mobius_strip",
+      label: "MOBIUS STRIP",
+      sliders: [
+        { id: "size", label: "size", min: 0.8, max: 2.4, step: 0.1, value: 1.5 },
+        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.35 },
+        { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 0.8 },
+        { id: "light_yaw", label: "l_yaw", min: -180, max: 180, step: 5, value: 35 },
+        { id: "light_pitch", label: "l_pit", min: -80, max: 80, step: 5, value: 45 },
+        { id: "light_roll", label: "l_roll", min: -180, max: 180, step: 5, value: 0 },
+        { id: "ambient", label: "amb", min: 0.0, max: 0.8, step: 0.05, value: 0.18 }
+      ]
+    },
+    {
+      id: "star_polyhedron",
+      label: "STAR POLY",
+      sliders: [
+        { id: "size", label: "size", min: 0.8, max: 3.0, step: 0.1, value: 1.8 },
+        { id: "speed", label: "speed", min: 0.0, max: 2.0, step: 0.1, value: 0.3 },
+        { id: "resolution", label: "res", min: 0.2, max: 1.0, step: 0.1, value: 1.0 },
+        { id: "light_yaw", label: "l_yaw", min: -180, max: 180, step: 5, value: 35 },
+        { id: "light_pitch", label: "l_pit", min: -80, max: 80, step: 5, value: 45 },
+        { id: "light_roll", label: "l_roll", min: -180, max: 180, step: 5, value: 0 },
+        { id: "ambient", label: "amb", min: 0.0, max: 0.8, step: 0.05, value: 0.12 }
       ]
     }
   ];
 
   const meshLibrary = {
     cube: createCubeMesh(),
-    octahedron: createOctahedronMesh()
+    octahedron: createOctahedronMesh(),
+    sphere: createSphereMesh(),
+    mobius_strip: createMobiusStripMesh(),
+    star_polyhedron: createStarPolyhedronMesh()
   };
 
   const state = {
@@ -247,6 +292,17 @@
     lines.push("| M              | open settings     |");
     lines.push("| ESC            | close or go back  |");
     lines.push("+----------------+-------------------+");
+    lines.push("");
+    lines.push("+----------------+-----------------------------------+");
+    lines.push("| Light param    | Effect                            |");
+    lines.push("+----------------+-----------------------------------+");
+    lines.push("| l_yaw          | moves light left / right around   |");
+    lines.push("|                | the figure horizontally           |");
+    lines.push("| l_pit          | moves light higher / lower above  |");
+    lines.push("|                | or below the figure               |");
+    lines.push("| l_roll         | rotates light around its forward  |");
+    lines.push("|                | axis, changing side tilt          |");
+    lines.push("+----------------+-----------------------------------+");
     return lines.join("\n");
   }
 
@@ -355,11 +411,13 @@
       const b = transformed[face[1]];
       const c = transformed[face[2]];
       const normal = normalizeVec3(crossVec3(subVec3(b, a), subVec3(c, a)));
-      if (normal[2] >= 0) {
+      const isBackFace = normal[2] >= 0;
+      if (!mesh.doubleSided && isBackFace) {
         return;
       }
 
-      const diffuse = Math.max(0, -dotVec3(normal, light));
+      const lightDot = -dotVec3(normal, light);
+      const diffuse = Math.max(0, mesh.doubleSided ? Math.abs(lightDot) : lightDot);
       const brightness = clamp(ambient, 1, ambient + diffuse * (1 - ambient));
       rasterizeTriangle(
         frame,
@@ -1213,12 +1271,12 @@
   function getLightDirection() {
     const yaw = (getSliderValue("light_yaw") * Math.PI) / 180;
     const pitch = (getSliderValue("light_pitch") * Math.PI) / 180;
-    const cosPitch = Math.cos(pitch);
-    return normalizeVec3([
-      Math.sin(yaw) * cosPitch,
-      Math.sin(pitch),
-      -Math.cos(yaw) * cosPitch
-    ]);
+    const roll = (getSliderValue("light_roll") * Math.PI) / 180;
+    const yawQuat = quatFromAxisAngle([0, 1, 0], yaw);
+    const pitchQuat = quatFromAxisAngle([1, 0, 0], pitch);
+    const rollQuat = quatFromAxisAngle([0, 0, 1], roll);
+    const lightQuat = quatNormalize(quatMultiply(rollQuat, quatMultiply(pitchQuat, yawQuat)));
+    return normalizeVec3(quatRotateVec3(lightQuat, [0, 0, -1]));
   }
 
   function getAmbientLight() {
@@ -1279,6 +1337,130 @@
     ];
 
     return { vertices, faces };
+  }
+
+  function createSphereMesh() {
+    const latSteps = 18;
+    const lonSteps = 28;
+    const vertices = [];
+    const faces = [];
+
+    for (let lat = 0; lat <= latSteps; lat += 1) {
+      const theta = (lat / latSteps) * Math.PI;
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
+
+      for (let lon = 0; lon < lonSteps; lon += 1) {
+        const phi = (lon / lonSteps) * Math.PI * 2;
+        vertices.push([
+          sinTheta * Math.cos(phi),
+          cosTheta,
+          sinTheta * Math.sin(phi)
+        ]);
+      }
+    }
+
+    for (let lat = 0; lat < latSteps; lat += 1) {
+      for (let lon = 0; lon < lonSteps; lon += 1) {
+        const nextLon = (lon + 1) % lonSteps;
+        const a = lat * lonSteps + lon;
+        const b = lat * lonSteps + nextLon;
+        const c = (lat + 1) * lonSteps + lon;
+        const d = (lat + 1) * lonSteps + nextLon;
+
+        if (lat > 0) {
+          faces.push([a, c, b]);
+        }
+        if (lat < latSteps - 1) {
+          faces.push([b, c, d]);
+        }
+      }
+    }
+
+    return { vertices, faces };
+  }
+
+  function createMobiusStripMesh() {
+    const uSteps = 52;
+    const vSteps = 12;
+    const vertices = [];
+    const faces = [];
+
+    for (let uIndex = 0; uIndex < uSteps; uIndex += 1) {
+      const u = (uIndex / uSteps) * Math.PI * 2;
+      const cosU = Math.cos(u);
+      const sinU = Math.sin(u);
+      const cosHalfU = Math.cos(u * 0.5);
+      const sinHalfU = Math.sin(u * 0.5);
+
+      for (let vIndex = 0; vIndex <= vSteps; vIndex += 1) {
+        const v = -0.42 + (vIndex / vSteps) * 0.84;
+        const radius = 1 + v * cosHalfU;
+        vertices.push([
+          radius * cosU,
+          v * sinHalfU * 1.15,
+          radius * sinU
+        ]);
+      }
+    }
+
+    for (let uIndex = 0; uIndex < uSteps; uIndex += 1) {
+      const nextU = (uIndex + 1) % uSteps;
+      for (let vIndex = 0; vIndex < vSteps; vIndex += 1) {
+        const a = uIndex * (vSteps + 1) + vIndex;
+        const b = a + 1;
+        const nextVIndex = nextU === 0 ? vSteps - vIndex : vIndex;
+        const c = nextU * (vSteps + 1) + nextVIndex;
+        const d = c + (nextU === 0 ? -1 : 1);
+        faces.push([a, c, b]);
+        faces.push([b, c, d]);
+      }
+    }
+
+    return { vertices, faces, doubleSided: true };
+  }
+
+  function createStarPolyhedronMesh() {
+    const vertices = [
+      [0, 0, 1.7],
+      [0, 0, -1.7],
+      [1.7, 0, 0],
+      [-1.7, 0, 0],
+      [0, 1.7, 0],
+      [0, -1.7, 0],
+      [0.55, 0.55, 0.55],
+      [0.55, 0.55, -0.55],
+      [0.55, -0.55, 0.55],
+      [0.55, -0.55, -0.55],
+      [-0.55, 0.55, 0.55],
+      [-0.55, 0.55, -0.55],
+      [-0.55, -0.55, 0.55],
+      [-0.55, -0.55, -0.55]
+    ];
+
+    const faces = [
+      [0, 6, 8], [0, 8, 12], [0, 12, 10], [0, 10, 6],
+      [1, 9, 7], [1, 13, 9], [1, 11, 13], [1, 7, 11],
+      [2, 6, 7], [2, 7, 9], [2, 9, 8], [2, 8, 6],
+      [3, 11, 10], [3, 13, 11], [3, 12, 13], [3, 10, 12],
+      [4, 10, 11], [4, 11, 7], [4, 7, 6], [4, 6, 10],
+      [5, 8, 9], [5, 9, 13], [5, 13, 12], [5, 12, 8]
+    ];
+
+    return orientMeshFacesOutward({ vertices, faces });
+  }
+
+  function orientMeshFacesOutward(mesh) {
+    const faces = mesh.faces.map((face) => {
+      const a = mesh.vertices[face[0]];
+      const b = mesh.vertices[face[1]];
+      const c = mesh.vertices[face[2]];
+      const normal = crossVec3(subVec3(b, a), subVec3(c, a));
+      const center = scaleVec3(addVec3(addVec3(a, b), c), 1 / 3);
+      return dotVec3(normal, center) >= 0 ? face : [face[0], face[2], face[1]];
+    });
+
+    return { ...mesh, faces };
   }
 
   function edgeFunction(a, b, c) {
@@ -1373,6 +1555,10 @@
 
   function subVec3(a, b) {
     return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  }
+
+  function addVec3(a, b) {
+    return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
   }
 
   function clamp(min, max, value) {
