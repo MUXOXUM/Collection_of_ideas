@@ -759,7 +759,7 @@
 
     function projectPointerToArcball(event) {
       const bounds = state.arcballBounds;
-      const x = (bounds.centerX - (event.clientX - bounds.left)) / bounds.radius;
+      const x = ((event.clientX - bounds.left) - bounds.centerX) / bounds.radius;
       const y = (bounds.centerY - (event.clientY - bounds.top)) / bounds.radius;
       const lengthSquared = x * x + y * y;
 
@@ -960,7 +960,7 @@
 
       if (state.running) {
         state.spinRotation.x += state.autoRotation.x * deltaMs;
-        state.spinRotation.y += state.autoRotation.y * deltaMs;
+        state.spinRotation.y -= state.autoRotation.y * deltaMs;
         state.spinRotation.z += state.autoRotation.z * deltaMs;
         state.accumulator += deltaMs;
 
