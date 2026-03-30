@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoLoT GPU</title>
+  <style>
+    :root {
+      --bg: #071108;
+      --bg-deep: #030704;
+      --panel: rgba(5, 16, 7, 0.9);
+      --panel-border: rgba(111, 255, 145, 0.25);
+      --text: #9affb0;
+      --muted: #5da86a;
+      --accent: #d4ff63;
+      --accent-strong: #7cff98;
+      --glass: rgba(13, 31, 15, 0.82);
+      --shadow: rgba(60, 255, 110, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
+      min-height: 100vh;
+      min-height: 100svh;
+      min-height: 100dvh;
+      font-family: "Courier New", "Lucida Console", monospace;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(119, 255, 144, 0.11), transparent 32%),
+        radial-gradient(circle at bottom, rgba(230, 255, 123, 0.08), transparent 28%),
+        linear-gradient(180deg, var(--bg-deep), var(--bg));
+      overflow: hidden;
+      text-shadow: 0 0 10px rgba(122, 255, 151, 0.18);
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          180deg,
+          rgba(120, 255, 143, 0.045) 0,
+          rgba(120, 255, 143, 0.045) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+      opacity: 0.5;
+      mix-blend-mode: screen;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at center, transparent 58%, rgba(0, 0, 0, 0.38) 100%);
+    }
+
+    .scene {
+      position: relative;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
+      min-height: 100vh;
+      min-height: 100svh;
+      min-height: 100dvh;
+      background:
+        linear-gradient(90deg, rgba(30, 72, 34, 0.1) 1px, transparent 1px),
+        linear-gradient(rgba(30, 72, 34, 0.1) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      cursor: grab;
+      filter: drop-shadow(0 0 20px rgba(98, 255, 115, 0.12));
+    }
+
+    canvas.dragging {
+      cursor: grabbing;
+    }
+
+    @media (orientation: portrait) {
+      body {
+        background:
+          radial-gradient(circle at top, rgba(119, 255, 144, 0.14), transparent 42%),
+          radial-gradient(circle at bottom, rgba(230, 255, 123, 0.1), transparent 34%),
+          linear-gradient(180deg, var(--bg-deep), var(--bg));
+      }
+
+      .scene {
+        background-size: 24px 24px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <main class="scene">
+    <canvas id="scene"></canvas>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("scene");
+    const gl = canvas.getContext("webgl", {
+      antialias: true,
+      alpha: false,
+      depth: true,
+      premultipliedAlpha: false
+    });
+
+    if (!gl) {
+      throw new Error("WebGL is not supported in this browser.");
+    }
+
+    const majorSegments = 2500;
+    const minorSegments = 900;
+    const cellCount = majorSegments * minorSegments;
+    const verticesPerCell = 6;
+    const floatsPerVertex = 10;
+    const baseMajorRadius = 182;
+    const baseMinorRadius = 80;
+    const baseCameraDistance = 640;
+    const baseProjectionScale = 760;
+    const simStepMs = 100;
+    const autoRotationSpeed = { x: 0.00009, y: 0.00013, z: 0.00007 };
+    const arcballSmoothing = 0.012;
+    const arcballSensitivity = 1.65;
+    const panSensitivity = 1;
+    const zoomStep = 0.004;
+    const minZoom = 0.55;
+    const maxZoom = 4.8;
+    const lightDirection = normalize({ x: -0.45, y: -0.9, z: 1 });
+    const initialViewQuaternion = quaternionFromEuler({ x: -0.78, y: 0.3, z: 0 });
+
+    const sceneVertexShaderSource = `
+      attribute vec3 aPosition;
+      attribute vec3 aNormal;
+      attribute vec2 aCellUv;
+      attribute vec2 aLocalUv;
+
+      uniform mat4 uProjectionMatrix;
+      uniform mat4 uModelMatrix;
+      uniform mat3 uNormalMatrix;
+      uniform vec3 uLightDirection;
+      uniform vec2 uPanNdc;
+      uniform float uZoom;
+      uniform sampler2D uStateTexture;
+
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      varying vec3 vLightDir;
+      varying vec2 vLocalUv;
+      varying float vAlive;
+
+      void main() {
+        vec4 worldPosition = uModelMatrix * vec4(aPosition, 1.0);
+        vec4 clip = uProjectionMatrix * worldPosition;
+        clip.xy = clip.xy * uZoom + uPanNdc * clip.w;
+        gl_Position = clip;
+
+        vNormal = normalize(uNormalMatrix * aNormal);
+        vViewDir = normalize(-worldPosition.xyz);
+        vLightDir = normalize(uLightDirection);
+        vLocalUv = aLocalUv;
+        vAlive = texture2D(uStateTexture, aCellUv).r;
+      }
+    `;
+
+    const sceneFragmentShaderSource = `
+      precision mediump float;
+
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      varying vec3 vLightDir;
+      varying vec2 vLocalUv;
+      varying float vAlive;
+
+      vec3 aliveBase = vec3(0.26, 0.95, 0.43);
+      vec3 aliveCore = vec3(0.96, 1.0, 0.52);
+      vec3 deadBase = vec3(0.18, 0.24, 0.18);
+      vec3 deadHigh = vec3(0.46, 0.58, 0.45);
+
+      void main() {
+        vec3 normal = normalize(vNormal);
+        vec3 viewDir = normalize(vViewDir);
+        vec3 lightDir = normalize(vLightDir);
+        vec3 halfVector = normalize(lightDir + viewDir);
+
+        float diffuse = max(0.0, dot(normal, lightDir));
+        float rim = pow(1.0 - max(0.0, dot(normal, viewDir)), 3.6);
+        float specular = pow(max(0.0, dot(normal, halfVector)), 28.0);
+
+        float cellEdge = min(min(vLocalUv.x, 1.0 - vLocalUv.x), min(vLocalUv.y, 1.0 - vLocalUv.y));
+        float gridLine = 1.0 - smoothstep(0.03, 0.11, cellEdge);
+        vec3 deadColor = mix(deadBase, deadHigh, diffuse * 0.6 + rim * 0.12);
+        vec3 aliveColor = mix(aliveBase, aliveCore, diffuse * 0.7 + rim * 0.08);
+        vec3 color = mix(deadColor, aliveColor, vAlive);
+
+        color += vec3(0.02, 0.03, 0.02) * rim;
+        color += vec3(0.28, 0.34, 0.18) * specular * (0.12 + vAlive * 0.32);
+        color = mix(color, color * 1.22 + vec3(0.18, 0.24, 0.08), gridLine * (0.06 + vAlive * 0.16));
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `;
+
+    const simVertexShaderSource = `
+      attribute vec2 aPosition;
+      varying vec2 vUv;
+
+      void main() {
+        vUv = aPosition * 0.5 + 0.5;
+        gl_Position = vec4(aPosition, 0.0, 1.0);
+      }
+    `;
+
+    const simFragmentShaderSource = `
+      precision mediump float;
+
+      varying vec2 vUv;
+
+      uniform sampler2D uStateTexture;
+      uniform vec2 uTexel;
+
+      float aliveAt(vec2 offset) {
+        vec2 uv = fract(vUv + offset * uTexel);
+        return step(0.5, texture2D(uStateTexture, uv).r);
+      }
+
+      void main() {
+        float neighbors =
+          aliveAt(vec2(-1.0, -1.0)) +
+          aliveAt(vec2(0.0, -1.0)) +
+          aliveAt(vec2(1.0, -1.0)) +
+          aliveAt(vec2(-1.0, 0.0)) +
+          aliveAt(vec2(1.0, 0.0)) +
+          aliveAt(vec2(-1.0, 1.0)) +
+          aliveAt(vec2(0.0, 1.0)) +
+          aliveAt(vec2(1.0, 1.0));
+
+        float alive = step(0.5, texture2D(uStateTexture, vUv).r);
+        float nextAlive = 0.0;
+
+        if (neighbors > 2.5 && neighbors < 3.5) {
+          nextAlive = 1.0;
+        } else if (alive > 0.5 && neighbors > 1.5 && neighbors < 2.5) {
+          nextAlive = 1.0;
+        }
+
+        gl_FragColor = vec4(vec3(nextAlive), 1.0);
+      }
+    `;
+
+    const state = {
+      width: 0,
+      height: 0,
+      aspect: 1,
+      fieldOfView: 1,
+      projectionNear: 10,
+      projectionFar: 2000,
+      viewQuaternion: initialViewQuaternion,
+      targetViewQuaternion: initialViewQuaternion,
+      spinRotation: { x: 0, y: 0, z: 0.18 },
+      autoRotation: { ...autoRotationSpeed },
+      running: true,
+      dragging: false,
+      dragMode: null,
+      lastArcballVector: { x: 0, y: 0, z: 1 },
+      lastPointer: { x: 0, y: 0 },
+      panOffset: { x: 0, y: 0 },
+      zoom: 1,
+      generation: 0,
+      accumulator: 0,
+      geometryBuffer: null,
+      vertexCount: 0,
+      sceneMetrics: {
+        majorRadius: baseMajorRadius,
+        minorRadius: baseMinorRadius,
+        cameraDistance: baseCameraDistance,
+        projectionScale: baseProjectionScale
+      },
+      arcballBounds: {
+        left: 0,
+        top: 0,
+        centerX: 0,
+        centerY: 0,
+        radius: 1
+      },
+      stateTextures: [],
+      stateFramebuffers: [],
+      currentStateIndex: 0
+    };
+
+    const sceneProgram = createProgram(gl, sceneVertexShaderSource, sceneFragmentShaderSource);
+    const simProgram = createProgram(gl, simVertexShaderSource, simFragmentShaderSource);
+    const sceneLocations = getSceneLocations(gl, sceneProgram);
+    const simLocations = getSimLocations(gl, simProgram);
+    const quadBuffer = createFullscreenQuad(gl);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.disable(gl.CULL_FACE);
+    gl.clearColor(0.012, 0.031, 0.016, 1);
+
+    initializeSimulationResources();
+
+    function createShader(glContext, type, source) {
+      const shader = glContext.createShader(type);
+      glContext.shaderSource(shader, source);
+      glContext.compileShader(shader);
+
+      if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+        const error = glContext.getShaderInfoLog(shader);
+        glContext.deleteShader(shader);
+        throw new Error(error || "Failed to compile shader.");
+      }
+
+      return shader;
+    }
+
+    function createProgram(glContext, vertexSource, fragmentSource) {
+      const vertexShader = createShader(glContext, glContext.VERTEX_SHADER, vertexSource);
+      const fragmentShader = createShader(glContext, glContext.FRAGMENT_SHADER, fragmentSource);
+      const program = glContext.createProgram();
+
+      glContext.attachShader(program, vertexShader);
+      glContext.attachShader(program, fragmentShader);
+      glContext.linkProgram(program);
+      glContext.deleteShader(vertexShader);
+      glContext.deleteShader(fragmentShader);
+
+      if (!glContext.getProgramParameter(program, glContext.LINK_STATUS)) {
+        const error = glContext.getProgramInfoLog(program);
+        glContext.deleteProgram(program);
+        throw new Error(error || "Failed to link WebGL program.");
+      }
+
+      return program;
+    }
+
+    function getSceneLocations(glContext, program) {
+      return {
+        attributes: {
+          position: glContext.getAttribLocation(program, "aPosition"),
+          normal: glContext.getAttribLocation(program, "aNormal"),
+          cellUv: glContext.getAttribLocation(program, "aCellUv"),
+          localUv: glContext.getAttribLocation(program, "aLocalUv")
+        },
+        uniforms: {
+          projectionMatrix: glContext.getUniformLocation(program, "uProjectionMatrix"),
+          modelMatrix: glContext.getUniformLocation(program, "uModelMatrix"),
+          normalMatrix: glContext.getUniformLocation(program, "uNormalMatrix"),
+          lightDirection: glContext.getUniformLocation(program, "uLightDirection"),
+          panNdc: glContext.getUniformLocation(program, "uPanNdc"),
+          zoom: glContext.getUniformLocation(program, "uZoom"),
+          stateTexture: glContext.getUniformLocation(program, "uStateTexture")
+        }
+      };
+    }
+
+    function getSimLocations(glContext, program) {
+      return {
+        attributes: {
+          position: glContext.getAttribLocation(program, "aPosition")
+        },
+        uniforms: {
+          stateTexture: glContext.getUniformLocation(program, "uStateTexture"),
+          texel: glContext.getUniformLocation(program, "uTexel")
+        }
+      };
+    }
+
+    function createTexture(glContext, data) {
+      const texture = glContext.createTexture();
+      glContext.bindTexture(glContext.TEXTURE_2D, texture);
+      glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.NEAREST);
+      glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.NEAREST);
+      glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
+      glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
+      glContext.pixelStorei(glContext.UNPACK_ALIGNMENT, 1);
+      glContext.texImage2D(
+        glContext.TEXTURE_2D,
+        0,
+        glContext.RGBA,
+        majorSegments,
+        minorSegments,
+        0,
+        glContext.RGBA,
+        glContext.UNSIGNED_BYTE,
+        data
+      );
+      return texture;
+    }
+
+    function createFramebuffer(glContext, texture) {
+      const framebuffer = glContext.createFramebuffer();
+      glContext.bindFramebuffer(glContext.FRAMEBUFFER, framebuffer);
+      glContext.framebufferTexture2D(
+        glContext.FRAMEBUFFER,
+        glContext.COLOR_ATTACHMENT0,
+        glContext.TEXTURE_2D,
+        texture,
+        0
+      );
+
+      if (glContext.checkFramebufferStatus(glContext.FRAMEBUFFER) !== glContext.FRAMEBUFFER_COMPLETE) {
+        throw new Error("Failed to create framebuffer for Game of Life simulation.");
+      }
+
+      return framebuffer;
+    }
+
+    function createFullscreenQuad(glContext) {
+      const buffer = glContext.createBuffer();
+      glContext.bindBuffer(glContext.ARRAY_BUFFER, buffer);
+      glContext.bufferData(
+        glContext.ARRAY_BUFFER,
+        new Float32Array([
+          -1, -1,
+           1, -1,
+          -1,  1,
+           1, -1,
+           1,  1,
+          -1,  1
+        ]),
+        glContext.STATIC_DRAW
+      );
+      return buffer;
+    }
+
+    function createRandomStateData() {
+      const data = new Uint8Array(cellCount * 4);
+
+      for (let index = 0; index < cellCount; index += 1) {
+        const alive = Math.random() > 0.68 ? 255 : 0;
+        const offset = index * 4;
+        data[offset] = alive;
+        data[offset + 1] = alive;
+        data[offset + 2] = alive;
+        data[offset + 3] = 255;
+      }
+
+      return data;
+    }
+
+    function createEmptyStateData() {
+      const data = new Uint8Array(cellCount * 4);
+      for (let index = 3; index < data.length; index += 4) {
+        data[index] = 255;
+      }
+      return data;
+    }
+
+    function initializeSimulationResources() {
+      const initialData = createRandomStateData();
+      const emptyData = createEmptyStateData();
+
+      state.stateTextures = [
+        createTexture(gl, initialData),
+        createTexture(gl, emptyData)
+      ];
+      state.stateFramebuffers = [
+        createFramebuffer(gl, state.stateTextures[0]),
+        createFramebuffer(gl, state.stateTextures[1])
+      ];
+      state.currentStateIndex = 0;
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    function randomizeSimulation() {
+      const randomData = createRandomStateData();
+
+      for (let index = 0; index < state.stateTextures.length; index += 1) {
+        gl.bindTexture(gl.TEXTURE_2D, state.stateTextures[index]);
+        gl.texSubImage2D(
+          gl.TEXTURE_2D,
+          0,
+          0,
+          0,
+          majorSegments,
+          minorSegments,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          index === 0 ? randomData : createEmptyStateData()
+        );
+      }
+
+      state.currentStateIndex = 0;
+      state.generation = 0;
+      state.running = true;
+      state.autoRotation = { ...autoRotationSpeed };
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    function stepSimulation() {
+      const sourceIndex = state.currentStateIndex;
+      const targetIndex = 1 - sourceIndex;
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.stateFramebuffers[targetIndex]);
+      gl.viewport(0, 0, majorSegments, minorSegments);
+      gl.disable(gl.DEPTH_TEST);
+
+      gl.useProgram(simProgram);
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+      gl.enableVertexAttribArray(simLocations.attributes.position);
+      gl.vertexAttribPointer(simLocations.attributes.position, 2, gl.FLOAT, false, 0, 0);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, state.stateTextures[sourceIndex]);
+      gl.uniform1i(simLocations.uniforms.stateTexture, 0);
+      gl.uniform2f(simLocations.uniforms.texel, 1 / majorSegments, 1 / minorSegments);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.enable(gl.DEPTH_TEST);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
+      state.currentStateIndex = targetIndex;
+      state.generation += 1;
+    }
+
+    function updateArcballBounds(rect) {
+      state.arcballBounds.left = rect.left;
+      state.arcballBounds.top = rect.top;
+      state.arcballBounds.centerX = rect.width * 0.5;
+      state.arcballBounds.centerY = rect.height * 0.5;
+      state.arcballBounds.radius = Math.min(rect.width, rect.height) * 0.5 || 1;
+    }
+
+    function createTorusGeometry(metrics) {
+      const data = new Float32Array(cellCount * verticesPerCell * floatsPerVertex);
+      const du = (Math.PI * 2) / majorSegments;
+      const dv = (Math.PI * 2) / minorSegments;
+      let offset = 0;
+
+      function writeVertex(u, v, cellU, cellV, centerU, centerV, localU, localV) {
+        const cu = Math.cos(u);
+        const su = Math.sin(u);
+        const cv = Math.cos(v);
+        const sv = Math.sin(v);
+        const ring = metrics.majorRadius + metrics.minorRadius * cv;
+
+        data[offset] = ring * cu;
+        data[offset + 1] = ring * su;
+        data[offset + 2] = metrics.minorRadius * sv;
+        data[offset + 3] = Math.cos(centerU) * Math.cos(centerV);
+        data[offset + 4] = Math.sin(centerU) * Math.cos(centerV);
+        data[offset + 5] = Math.sin(centerV);
+        data[offset + 6] = cellU;
+        data[offset + 7] = cellV;
+        data[offset + 8] = localU;
+        data[offset + 9] = localV;
+        offset += floatsPerVertex;
+      }
+
+      for (let i = 0; i < majorSegments; i += 1) {
+        const u = i * du;
+        const uNext = ((i + 1) % majorSegments) * du;
+        const cellU = (i + 0.5) / majorSegments;
+        const centerU = u + du * 0.5;
+
+        for (let j = 0; j < minorSegments; j += 1) {
+          const v = j * dv;
+          const vNext = ((j + 1) % minorSegments) * dv;
+          const cellV = (j + 0.5) / minorSegments;
+          const centerV = v + dv * 0.5;
+
+          writeVertex(u, v, cellU, cellV, centerU, centerV, 0, 0);
+          writeVertex(uNext, v, cellU, cellV, centerU, centerV, 1, 0);
+          writeVertex(uNext, vNext, cellU, cellV, centerU, centerV, 1, 1);
+          writeVertex(u, v, cellU, cellV, centerU, centerV, 0, 0);
+          writeVertex(uNext, vNext, cellU, cellV, centerU, centerV, 1, 1);
+          writeVertex(u, vNext, cellU, cellV, centerU, centerV, 0, 1);
+        }
+      }
+
+      return data;
+    }
+
+    function uploadGeometry() {
+      const geometry = createTorusGeometry(state.sceneMetrics);
+
+      if (!state.geometryBuffer) {
+        state.geometryBuffer = gl.createBuffer();
+      }
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, state.geometryBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, geometry, gl.STATIC_DRAW);
+      state.vertexCount = geometry.length / floatsPerVertex;
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      const shortestSide = Math.min(rect.width, rect.height);
+      const isPortrait = rect.height > rect.width;
+      const scale = Math.max(0.68, Math.min(1.12, shortestSide / 390));
+
+      state.width = rect.width;
+      state.height = rect.height;
+      state.aspect = rect.width / Math.max(rect.height, 1);
+      state.sceneMetrics = {
+        majorRadius: baseMajorRadius * (isPortrait ? scale * 0.9 : scale),
+        minorRadius: baseMinorRadius * (isPortrait ? scale * 0.92 : scale),
+        cameraDistance: baseCameraDistance * (isPortrait ? 0.95 : 1),
+        projectionScale: baseProjectionScale * (isPortrait ? scale * 0.82 : scale)
+      };
+
+      state.fieldOfView = 2 * Math.atan(rect.height / (2 * state.sceneMetrics.projectionScale));
+
+      canvas.width = Math.round(rect.width * ratio);
+      canvas.height = Math.round(rect.height * ratio);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
+      updateArcballBounds(rect);
+      uploadGeometry();
+    }
+
+    function normalize(vector) {
+      const length = Math.hypot(vector.x, vector.y, vector.z) || 1;
+      return {
+        x: vector.x / length,
+        y: vector.y / length,
+        z: vector.z / length
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function dot(a, b) {
+      return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    function cross(a, b) {
+      return {
+        x: a.y * b.z - a.z * b.y,
+        y: a.z * b.x - a.x * b.z,
+        z: a.x * b.y - a.y * b.x
+      };
+    }
+
+    function normalizeQuaternion(quaternion) {
+      const length = Math.hypot(quaternion.w, quaternion.x, quaternion.y, quaternion.z) || 1;
+      return {
+        w: quaternion.w / length,
+        x: quaternion.x / length,
+        y: quaternion.y / length,
+        z: quaternion.z / length
+      };
+    }
+
+    function multiplyQuaternions(a, b) {
+      return normalizeQuaternion({
+        w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+        x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+        y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+        z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w
+      });
+    }
+
+    function quaternionFromAxisAngle(axis, angle) {
+      const halfAngle = angle * 0.5;
+      const sinHalf = Math.sin(halfAngle);
+      return normalizeQuaternion({
+        w: Math.cos(halfAngle),
+        x: axis.x * sinHalf,
+        y: axis.y * sinHalf,
+        z: axis.z * sinHalf
+      });
+    }
+
+    function quaternionBetweenVectors(from, to) {
+      const axis = cross(from, to);
+      const axisLength = Math.hypot(axis.x, axis.y, axis.z);
+      const alignment = Math.max(-1, Math.min(1, dot(from, to)));
+
+      if (axisLength < 1e-6) {
+        if (alignment > 0.999999) {
+          return { w: 1, x: 0, y: 0, z: 0 };
+        }
+
+        const fallbackAxis = Math.abs(from.x) < 0.9
+          ? normalize(cross(from, { x: 1, y: 0, z: 0 }))
+          : normalize(cross(from, { x: 0, y: 1, z: 0 }));
+        return quaternionFromAxisAngle(fallbackAxis, Math.PI);
+      }
+
+      return quaternionFromAxisAngle(
+        {
+          x: axis.x / axisLength,
+          y: axis.y / axisLength,
+          z: axis.z / axisLength
+        },
+        Math.acos(alignment) * arcballSensitivity
+      );
+    }
+
+    function quaternionFromEuler(rotation) {
+      const qx = quaternionFromAxisAngle({ x: 1, y: 0, z: 0 }, rotation.x || 0);
+      const qy = quaternionFromAxisAngle({ x: 0, y: 1, z: 0 }, rotation.y || 0);
+      const qz = quaternionFromAxisAngle({ x: 0, y: 0, z: 1 }, rotation.z || 0);
+      return multiplyQuaternions(qz, multiplyQuaternions(qy, qx));
+    }
+
+    function slerpQuaternions(from, to, t) {
+      let target = to;
+      let cosine = from.w * to.w + from.x * to.x + from.y * to.y + from.z * to.z;
+
+      if (cosine < 0) {
+        cosine = -cosine;
+        target = {
+          w: -to.w,
+          x: -to.x,
+          y: -to.y,
+          z: -to.z
+        };
+      }
+
+      if (cosine > 0.9995) {
+        return normalizeQuaternion({
+          w: from.w + (target.w - from.w) * t,
+          x: from.x + (target.x - from.x) * t,
+          y: from.y + (target.y - from.y) * t,
+          z: from.z + (target.z - from.z) * t
+        });
+      }
+
+      const theta = Math.acos(Math.max(-1, Math.min(1, cosine)));
+      const sinTheta = Math.sin(theta);
+      const fromWeight = Math.sin((1 - t) * theta) / sinTheta;
+      const toWeight = Math.sin(t * theta) / sinTheta;
+
+      return normalizeQuaternion({
+        w: from.w * fromWeight + target.w * toWeight,
+        x: from.x * fromWeight + target.x * toWeight,
+        y: from.y * fromWeight + target.y * toWeight,
+        z: from.z * fromWeight + target.z * toWeight
+      });
+    }
+
+    function projectPointerToArcball(event) {
+      const bounds = state.arcballBounds;
+      const x = (bounds.centerX - (event.clientX - bounds.left)) / bounds.radius;
+      const y = (bounds.centerY - (event.clientY - bounds.top)) / bounds.radius;
+      const lengthSquared = x * x + y * y;
+
+      if (lengthSquared <= 1) {
+        return {
+          x,
+          y,
+          z: Math.sqrt(1 - lengthSquared)
+        };
+      }
+
+      const scale = 1 / Math.sqrt(lengthSquared);
+      return {
+        x: x * scale,
+        y: y * scale,
+        z: 0
+      };
+    }
+
+    function normalizeWheelDelta(event) {
+      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+        return event.deltaY * 16;
+      }
+
+      if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+        return event.deltaY * Math.max(state.height, 1);
+      }
+
+      return event.deltaY;
+    }
+
+    function applyZoomDelta(deltaY) {
+      state.zoom = clamp(state.zoom * Math.exp(-deltaY * zoomStep), minZoom, maxZoom);
+    }
+
+    function makePerspectiveMatrix(fovY, aspect, near, far) {
+      const f = 1 / Math.tan(fovY / 2);
+      const rangeInverse = 1 / (near - far);
+
+      return new Float32Array([
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (near + far) * rangeInverse, -1,
+        0, 0, near * far * 2 * rangeInverse, 0
+      ]);
+    }
+
+    function makeRotationMatrixFromQuaternion(quaternion) {
+      const { w, x, y, z } = quaternion;
+      const x2 = x + x;
+      const y2 = y + y;
+      const z2 = z + z;
+      const xx = x * x2;
+      const xy = x * y2;
+      const xz = x * z2;
+      const yy = y * y2;
+      const yz = y * z2;
+      const zz = z * z2;
+      const wx = w * x2;
+      const wy = w * y2;
+      const wz = w * z2;
+
+      return new Float32Array([
+        1 - (yy + zz), xy + wz, xz - wy, 0,
+        xy - wz, 1 - (xx + zz), yz + wx, 0,
+        xz + wy, yz - wx, 1 - (xx + yy), 0,
+        0, 0, 0, 1
+      ]);
+    }
+
+    function makeRotationMatrixFromEuler(rotation) {
+      const cx = Math.cos(rotation.x);
+      const sx = Math.sin(rotation.x);
+      const cy = Math.cos(rotation.y);
+      const sy = Math.sin(rotation.y);
+      const cz = Math.cos(rotation.z);
+      const sz = Math.sin(rotation.z);
+
+      return new Float32Array([
+        cy * cz, cy * sz, -sy, 0,
+        sx * sy * cz - cx * sz, sx * sy * sz + cx * cz, sx * cy, 0,
+        cx * sy * cz + sx * sz, cx * sy * sz - sx * cz, cx * cy, 0,
+        0, 0, 0, 1
+      ]);
+    }
+
+    function multiplyMatrices(a, b) {
+      const out = new Float32Array(16);
+
+      for (let column = 0; column < 4; column += 1) {
+        const columnOffset = column * 4;
+        const b0 = b[columnOffset];
+        const b1 = b[columnOffset + 1];
+        const b2 = b[columnOffset + 2];
+        const b3 = b[columnOffset + 3];
+
+        out[columnOffset] = a[0] * b0 + a[4] * b1 + a[8] * b2 + a[12] * b3;
+        out[columnOffset + 1] = a[1] * b0 + a[5] * b1 + a[9] * b2 + a[13] * b3;
+        out[columnOffset + 2] = a[2] * b0 + a[6] * b1 + a[10] * b2 + a[14] * b3;
+        out[columnOffset + 3] = a[3] * b0 + a[7] * b1 + a[11] * b2 + a[15] * b3;
+      }
+
+      return out;
+    }
+
+    function makeTranslationMatrix(x, y, z) {
+      return new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        x, y, z, 1
+      ]);
+    }
+
+    function extractNormalMatrix(modelMatrix) {
+      return new Float32Array([
+        modelMatrix[0], modelMatrix[1], modelMatrix[2],
+        modelMatrix[4], modelMatrix[5], modelMatrix[6],
+        modelMatrix[8], modelMatrix[9], modelMatrix[10]
+      ]);
+    }
+
+    function getCurrentStateTexture() {
+      return state.stateTextures[state.currentStateIndex];
+    }
+
+    function render() {
+      const projectionMatrix = makePerspectiveMatrix(
+        state.fieldOfView,
+        state.aspect,
+        state.projectionNear,
+        state.projectionFar
+      );
+      const spinMatrix = makeRotationMatrixFromEuler(state.spinRotation);
+      const viewRotationMatrix = makeRotationMatrixFromQuaternion(state.viewQuaternion);
+      const rotationMatrix = multiplyMatrices(viewRotationMatrix, spinMatrix);
+      const modelMatrix = multiplyMatrices(
+        makeTranslationMatrix(0, 0, -state.sceneMetrics.cameraDistance),
+        rotationMatrix
+      );
+      const normalMatrix = extractNormalMatrix(rotationMatrix);
+      const panNdcX = state.width ? (state.panOffset.x * 2) / state.width : 0;
+      const panNdcY = state.height ? (-state.panOffset.y * 2) / state.height : 0;
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(sceneProgram);
+      gl.bindBuffer(gl.ARRAY_BUFFER, state.geometryBuffer);
+
+      const stride = floatsPerVertex * Float32Array.BYTES_PER_ELEMENT;
+      gl.enableVertexAttribArray(sceneLocations.attributes.position);
+      gl.vertexAttribPointer(sceneLocations.attributes.position, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(sceneLocations.attributes.normal);
+      gl.vertexAttribPointer(
+        sceneLocations.attributes.normal,
+        3,
+        gl.FLOAT,
+        false,
+        stride,
+        3 * Float32Array.BYTES_PER_ELEMENT
+      );
+      gl.enableVertexAttribArray(sceneLocations.attributes.cellUv);
+      gl.vertexAttribPointer(
+        sceneLocations.attributes.cellUv,
+        2,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * Float32Array.BYTES_PER_ELEMENT
+      );
+      gl.enableVertexAttribArray(sceneLocations.attributes.localUv);
+      gl.vertexAttribPointer(
+        sceneLocations.attributes.localUv,
+        2,
+        gl.FLOAT,
+        false,
+        stride,
+        8 * Float32Array.BYTES_PER_ELEMENT
+      );
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, getCurrentStateTexture());
+      gl.uniform1i(sceneLocations.uniforms.stateTexture, 0);
+      gl.uniformMatrix4fv(sceneLocations.uniforms.projectionMatrix, false, projectionMatrix);
+      gl.uniformMatrix4fv(sceneLocations.uniforms.modelMatrix, false, modelMatrix);
+      gl.uniformMatrix3fv(sceneLocations.uniforms.normalMatrix, false, normalMatrix);
+      gl.uniform3f(sceneLocations.uniforms.lightDirection, lightDirection.x, lightDirection.y, lightDirection.z);
+      gl.uniform2f(sceneLocations.uniforms.panNdc, panNdcX, panNdcY);
+      gl.uniform1f(sceneLocations.uniforms.zoom, state.zoom);
+
+      gl.drawArrays(gl.TRIANGLES, 0, state.vertexCount);
+    }
+
+    function tick(deltaMs) {
+      const smoothing = 1 - Math.exp(-arcballSmoothing * deltaMs);
+      state.viewQuaternion = slerpQuaternions(state.viewQuaternion, state.targetViewQuaternion, smoothing);
+
+      if (state.running) {
+        state.spinRotation.x += state.autoRotation.x * deltaMs;
+        state.spinRotation.y += state.autoRotation.y * deltaMs;
+        state.spinRotation.z += state.autoRotation.z * deltaMs;
+        state.accumulator += deltaMs;
+
+        while (state.accumulator >= simStepMs) {
+          state.accumulator -= simStepMs;
+          stepSimulation();
+        }
+      }
+    }
+
+    let previousFrame = performance.now();
+    function frame(now) {
+      const delta = Math.min(32, now - previousFrame);
+      previousFrame = now;
+      tick(delta);
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    canvas.addEventListener("pointerdown", (event) => {
+      updateArcballBounds(canvas.getBoundingClientRect());
+
+      if (event.button === 2 || event.button === 1) {
+        state.dragMode = "pan";
+        state.lastPointer.x = event.clientX;
+        state.lastPointer.y = event.clientY;
+      } else {
+        state.dragMode = "rotate";
+        state.lastArcballVector = projectPointerToArcball(event);
+      }
+
+      state.dragging = true;
+      canvas.classList.add("dragging");
+      canvas.setPointerCapture(event.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!state.dragging) {
+        return;
+      }
+
+      if (state.dragMode === "pan") {
+        state.panOffset.x += (event.clientX - state.lastPointer.x) * panSensitivity;
+        state.panOffset.y += (event.clientY - state.lastPointer.y) * panSensitivity;
+        state.lastPointer.x = event.clientX;
+        state.lastPointer.y = event.clientY;
+        return;
+      }
+
+      const currentArcballVector = projectPointerToArcball(event);
+      const deltaQuaternion = quaternionBetweenVectors(state.lastArcballVector, currentArcballVector);
+      state.targetViewQuaternion = multiplyQuaternions(deltaQuaternion, state.targetViewQuaternion);
+      state.lastArcballVector = currentArcballVector;
+    });
+
+    function stopDragging(event) {
+      state.dragging = false;
+      state.dragMode = null;
+      canvas.classList.remove("dragging");
+      if (event) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointerleave", () => {
+      state.dragging = false;
+      state.dragMode = null;
+      canvas.classList.remove("dragging");
+    });
+    canvas.addEventListener("pointercancel", stopDragging);
+    canvas.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      applyZoomDelta(normalizeWheelDelta(event));
+    }, { passive: false });
+    canvas.addEventListener("dblclick", () => {
+      state.targetViewQuaternion = initialViewQuaternion;
+      state.viewQuaternion = initialViewQuaternion;
+      state.panOffset.x = 0;
+      state.panOffset.y = 0;
+      state.zoom = 1;
+    });
+
+    window.addEventListener("resize", resize);
+
+    randomizeSimulation();
+    resize();
+    render();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

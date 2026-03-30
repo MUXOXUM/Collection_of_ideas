@@ -24,11 +24,19 @@ window.PROJECTS = [
     "topic": "sim"
   },
   {
-    "title": "Game Of Life On Toroid",
-    "path": "game_of_life_on_toroid/index.html",
-    "readmePath": "game_of_life_on_toroid/README.md",
+    "title": "Game Of Life On Toroid (CPU)",
+    "path": "game_of_life_on_toroid_cpu/index.html",
+    "readmePath": "game_of_life_on_toroid_cpu/README.md",
     "createdAt": "2026-03-20",
     "updatedAt": "2026-03-22",
+    "topic": "art"
+  },
+  {
+    "title": "Game Of Life On Toroid (GPU)",
+    "path": "game_of_life_on_toroid_gpu/index.html",
+    "readmePath": "game_of_life_on_toroid_gpu/README.md",
+    "createdAt": "2026-03-31",
+    "updatedAt": "2026-03-31",
     "topic": "art"
   },
   {
