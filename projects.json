@@ -1,19 +1,5 @@
 [
   {
-    "title": "3D ASCII Console",
-    "path": "3d_ascii_console/index.html",
-    "readmePath": "3d_ascii_console/README.md",
-    "createdAt": "2026-03-27",
-    "topic": "sim"
-  },
-  {
-    "title": "Butterfly Effect",
-    "path": "butterfly_effect/index.html",
-    "readmePath": "butterfly_effect/README.md",
-    "createdAt": "2026-03-22",
-    "topic": "sim"
-  },
-  {
     "title": "Strange Attractors",
     "path": "strange_attractors/index.html",
     "readmePath": "strange_attractors/README.md",
@@ -35,17 +21,31 @@
     "topic": "art"
   },
   {
+    "title": "3D ASCII Console",
+    "path": "3d_ascii_console/index.html",
+    "readmePath": "3d_ascii_console/README.md",
+    "createdAt": "2026-03-27",
+    "topic": "sim"
+  },
+  {
+    "title": "Butterfly Effect",
+    "path": "butterfly_effect/index.html",
+    "readmePath": "butterfly_effect/README.md",
+    "createdAt": "2026-03-22",
+    "topic": "sim"
+  },
+  {
     "title": "Imposing Clocks",
     "path": "imposing_clocks/index.html",
     "readmePath": "imposing_clocks/README.md",
     "createdAt": "2026-04-01",
-    "topic": "-"
+    "topic": "other"
   },
   {
     "title": "Optical Illusions",
     "path": "optical_illusions/index.html",
     "readmePath": "optical_illusions/README.md",
     "createdAt": "2026-03-25",
-    "topic": "-"
+    "topic": "other"
   }
 ]
