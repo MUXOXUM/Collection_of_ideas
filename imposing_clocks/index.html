@@ -77,67 +77,65 @@
             width: 100%;
             height: auto;
             display: block;
-            filter: drop-shadow(0 18px 32px var(--shadow));
+            overflow: visible;
         }
 
         .metal-ring {
-            stroke: #d3d2cf;
-            stroke-width: 8;
+            stroke: rgba(245, 245, 245, 0.2);
+            stroke-width: 1;
             fill: none;
-            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.08));
         }
 
         .day-section {
-            fill: #eeeeea;
-            stroke: #c8c7c4;
+            fill: rgba(245, 245, 245, 0.08);
+            stroke: rgba(245, 245, 245, 0.08);
             stroke-width: 1;
         }
 
         .night-section {
-            fill: #1a1d33;
-            stroke: #35374b;
+            fill: rgba(8, 10, 18, 0.28);
+            stroke: rgba(245, 245, 245, 0.08);
             stroke-width: 1;
         }
 
         .hour-hand {
-            stroke: #202020;
-            stroke-width: 4;
+            stroke: rgba(245, 245, 245, 0.94);
+            stroke-width: 3;
             stroke-linecap: round;
         }
 
         .minute-hand {
-            stroke: #555555;
-            stroke-width: 3;
+            stroke: rgba(245, 245, 245, 0.78);
+            stroke-width: 2;
             stroke-linecap: round;
         }
 
         .second-hand {
-            stroke: #d94b4b;
-            stroke-width: 2;
+            stroke: rgba(245, 245, 245, 0.42);
+            stroke-width: 1.5;
             stroke-linecap: round;
         }
 
         .hour-hand-night {
-            stroke: #f5f5f5;
-            stroke-width: 4;
-            stroke-linecap: round;
-        }
-
-        .minute-hand-night {
-            stroke: #e5e5e5;
+            stroke: rgba(245, 245, 245, 0.94);
             stroke-width: 3;
             stroke-linecap: round;
         }
 
-        .center-circle {
-            fill: #8b8b8b;
-            stroke: #f5f5f5;
+        .minute-hand-night {
+            stroke: rgba(245, 245, 245, 0.78);
             stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .center-circle {
+            fill: rgba(245, 245, 245, 0.92);
+            stroke: none;
         }
 
         .marker {
-            stroke: #6f6f6f;
-            stroke-width: 2;
+            stroke: rgba(245, 245, 245, 0.2);
+            stroke-width: 1;
         }
 
         .marker-number,
@@ -149,29 +147,16 @@
         }
 
         .marker-number {
-            fill: #444444;
+            fill: rgba(245, 245, 245, 0.78);
         }
 
         .marker-night {
-            stroke: #dfdfdf;
-            stroke-width: 2;
+            stroke: rgba(245, 245, 245, 0.12);
+            stroke-width: 1;
         }
 
         .marker-number-night {
-            fill: #f3f3f3;
-        }
-
-        .screen-time {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            z-index: 5;
-            margin: 0;
-            color: var(--label);
-            font: 300 clamp(1.2rem, 2.6vw, 1.85rem) / 1 "Segoe UI", Arial, sans-serif;
-            letter-spacing: 0.04em;
-            text-shadow: 0 1px 10px rgba(0, 0, 0, 0.4);
-            pointer-events: none;
+            fill: rgba(245, 245, 245, 0.78);
         }
 
         .clock-caption {
@@ -190,7 +175,6 @@
             margin: 0 0 6px;
             font-size: 1rem;
             letter-spacing: 0.04em;
-            text-transform: uppercase;
         }
 
         .clock-caption-hint {
@@ -217,10 +201,10 @@
 
         .rotary-pointer {
             position: absolute;
-            top: 4%;
+            top: 2.4%;
             left: 50%;
             width: 0;
-            height: 46%;
+            height: 47.6%;
             transform: translateX(-50%);
             z-index: 4;
             pointer-events: none;
@@ -295,11 +279,6 @@
                 max-width: none;
             }
 
-            .screen-time {
-                right: 16px;
-                bottom: 16px;
-            }
-
             .rotary-clock {
                 width: min(92vw, var(--clock-diameter));
             }
@@ -315,7 +294,6 @@
         <h2 class="clock-caption-title" id="clock-title">24 Hour Clock</h2>
         <p class="clock-caption-hint">← → or A / D</p>
     </aside>
-    <p class="screen-time" id="screen-time" aria-live="polite">--:--:--</p>
     <script>
         const CLOCK_DIAMETER = 400;
         const CLOCK_CENTER = CLOCK_DIAMETER / 2;
@@ -331,6 +309,15 @@
             minuteHandLength: 140,
             secondHandLength: 160,
             centerDotRadius: 8,
+            classicOuterRadius: 199,
+            classicDayNightRadius: 198,
+            classicMarkerInnerRadius: 179,
+            classicMarkerOuterRadius: 191,
+            classicMarkerLabelRadius: 152,
+            classicHourHandLength: 118,
+            classicMinuteHandLength: 150,
+            classicSecondHandLength: 172,
+            classicCenterDotRadius: 6,
             rotaryTrackHours: 190,
             rotaryTrackMinutes: 136,
             rotaryTrackSeconds: 85,
@@ -388,21 +375,21 @@
                                     <clipPath id="night-clip" clipPathUnits="userSpaceOnUse">
                                         <path
                                             id="night-clip-path"
-                                            d="M ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center} L ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.dayNightRadius} A ${CLOCK_GEOMETRY.dayNightRadius} ${CLOCK_GEOMETRY.dayNightRadius} 0 1 1 ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.dayNightRadius} Z"
+                                            d="M ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center} L ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.classicDayNightRadius} A ${CLOCK_GEOMETRY.classicDayNightRadius} ${CLOCK_GEOMETRY.classicDayNightRadius} 0 1 1 ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicDayNightRadius} Z"
                                         ></path>
                                     </clipPath>
                                 </defs>
 
-                                <circle cx="${CLOCK_GEOMETRY.center}" cy="${CLOCK_GEOMETRY.center}" r="${CLOCK_GEOMETRY.outerRadius}" class="metal-ring"></circle>
+                                <circle cx="${CLOCK_GEOMETRY.center}" cy="${CLOCK_GEOMETRY.center}" r="${CLOCK_GEOMETRY.classicOuterRadius}" class="metal-ring"></circle>
                                 <g id="hour-markers"></g>
                                 <g id="hour-markers-night" clip-path="url(#night-clip)"></g>
                                 <g id="hands">
-                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.hourHandLength}" class="hour-hand" id="hour-hand"></line>
-                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.minuteHandLength}" class="minute-hand" id="minute-hand"></line>
-                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.secondHandLength}" class="second-hand" id="second-hand"></line>
-                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.hourHandLength}" class="hour-hand-night" id="hour-hand-night" clip-path="url(#night-clip)"></line>
-                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.minuteHandLength}" class="minute-hand-night" id="minute-hand-night" clip-path="url(#night-clip)"></line>
-                                    <circle cx="${CLOCK_GEOMETRY.center}" cy="${CLOCK_GEOMETRY.center}" r="${CLOCK_GEOMETRY.centerDotRadius}" class="center-circle"></circle>
+                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.classicHourHandLength}" class="hour-hand" id="hour-hand"></line>
+                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.classicMinuteHandLength}" class="minute-hand" id="minute-hand"></line>
+                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.classicSecondHandLength}" class="second-hand" id="second-hand"></line>
+                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.classicHourHandLength}" class="hour-hand-night" id="hour-hand-night" clip-path="url(#night-clip)"></line>
+                                    <line x1="${CLOCK_GEOMETRY.center}" y1="${CLOCK_GEOMETRY.center}" x2="${CLOCK_GEOMETRY.center}" y2="${CLOCK_GEOMETRY.center - CLOCK_GEOMETRY.classicMinuteHandLength}" class="minute-hand-night" id="minute-hand-night" clip-path="url(#night-clip)"></line>
+                                    <circle cx="${CLOCK_GEOMETRY.center}" cy="${CLOCK_GEOMETRY.center}" r="${CLOCK_GEOMETRY.classicCenterDotRadius}" class="center-circle"></circle>
                                 </g>
                             </svg>
                         </div>
@@ -439,12 +426,12 @@
 
                 for (let hour = 0; hour < 24; hour += 1) {
                     const angle = (hour * 15 - 90) * Math.PI / 180;
-                    const x1 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.markerInnerRadius * Math.cos(angle);
-                    const y1 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.markerInnerRadius * Math.sin(angle);
-                    const x2 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.markerOuterRadius * Math.cos(angle);
-                    const y2 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.markerOuterRadius * Math.sin(angle);
-                    const textX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.markerLabelRadius * Math.cos(angle);
-                    const textY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.markerLabelRadius * Math.sin(angle);
+                    const x1 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMarkerInnerRadius * Math.cos(angle);
+                    const y1 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMarkerInnerRadius * Math.sin(angle);
+                    const x2 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMarkerOuterRadius * Math.cos(angle);
+                    const y2 = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMarkerOuterRadius * Math.sin(angle);
+                    const textX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMarkerLabelRadius * Math.cos(angle);
+                    const textY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMarkerLabelRadius * Math.sin(angle);
 
                     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                     line.setAttribute("x1", x1);
@@ -466,14 +453,14 @@
                     text.setAttribute("x", textX);
                     text.setAttribute("y", textY);
                     text.setAttribute("class", "marker-number");
-                    text.textContent = hour.toString().padStart(2, "0");
+                    text.textContent = hour.toString();
                     markers.appendChild(text);
 
                     const textNight = document.createElementNS("http://www.w3.org/2000/svg", "text");
                     textNight.setAttribute("x", textX);
                     textNight.setAttribute("y", textY);
                     textNight.setAttribute("class", "marker-number-night");
-                    textNight.textContent = hour.toString().padStart(2, "0");
+                    textNight.textContent = hour.toString();
                     markersNight.appendChild(textNight);
                 }
             }
@@ -502,17 +489,17 @@
                 const sunsetAngle = getTimeAngle(sunset);
 
                 const createArc = (startAngle, endAngle, className) => {
-                    const startX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.dayNightRadius * Math.cos(startAngle);
-                    const startY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.dayNightRadius * Math.sin(startAngle);
-                    const endX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.dayNightRadius * Math.cos(endAngle);
-                    const endY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.dayNightRadius * Math.sin(endAngle);
+                    const startX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicDayNightRadius * Math.cos(startAngle);
+                    const startY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicDayNightRadius * Math.sin(startAngle);
+                    const endX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicDayNightRadius * Math.cos(endAngle);
+                    const endY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicDayNightRadius * Math.sin(endAngle);
                     const largeArc = (endAngle - startAngle) % (2 * Math.PI) > Math.PI ? 1 : 0;
 
                     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
                     path.setAttribute("d", [
                         "M", CLOCK_GEOMETRY.center, CLOCK_GEOMETRY.center,
                         "L", startX, startY,
-                        "A", CLOCK_GEOMETRY.dayNightRadius, CLOCK_GEOMETRY.dayNightRadius, 0, largeArc, 1, endX, endY,
+                        "A", CLOCK_GEOMETRY.classicDayNightRadius, CLOCK_GEOMETRY.classicDayNightRadius, 0, largeArc, 1, endX, endY,
                         "Z"
                     ].join(" "));
                     path.setAttribute("class", className);
@@ -537,12 +524,12 @@
                 const minuteAngle = (minutes * 6 - 90) * Math.PI / 180;
                 const secondAngle = (seconds * 6 - 90) * Math.PI / 180;
 
-                const hourX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.hourHandLength * Math.cos(hourAngle);
-                const hourY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.hourHandLength * Math.sin(hourAngle);
-                const minuteX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.minuteHandLength * Math.cos(minuteAngle);
-                const minuteY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.minuteHandLength * Math.sin(minuteAngle);
-                const secondX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.secondHandLength * Math.cos(secondAngle);
-                const secondY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.secondHandLength * Math.sin(secondAngle);
+                const hourX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicHourHandLength * Math.cos(hourAngle);
+                const hourY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicHourHandLength * Math.sin(hourAngle);
+                const minuteX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMinuteHandLength * Math.cos(minuteAngle);
+                const minuteY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicMinuteHandLength * Math.sin(minuteAngle);
+                const secondX = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicSecondHandLength * Math.cos(secondAngle);
+                const secondY = CLOCK_GEOMETRY.center + CLOCK_GEOMETRY.classicSecondHandLength * Math.sin(secondAngle);
 
                 document.getElementById("hour-hand").setAttribute("x2", hourX);
                 document.getElementById("hour-hand").setAttribute("y2", hourY);
@@ -556,13 +543,8 @@
                 document.getElementById("second-hand").setAttribute("y2", secondY);
             }
 
-            function updateDigitalTime() {
-                document.getElementById("screen-time").textContent = new Date().toLocaleTimeString("ru-RU");
-            }
-
             function updateClock() {
                 updateHands();
-                updateDigitalTime();
             }
 
             return { mount, unmount };
@@ -624,8 +606,6 @@
                 hoursRing.setAttribute("transform", `rotate(${-hours * 15} ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center})`);
                 minutesRing.setAttribute("transform", `rotate(${-minutes * 6} ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center})`);
                 secondsRing.setAttribute("transform", `rotate(${-seconds * 6} ${CLOCK_GEOMETRY.center} ${CLOCK_GEOMETRY.center})`);
-                document.getElementById("screen-time").textContent = now.toLocaleTimeString("ru-RU");
-
                 frameId = window.requestAnimationFrame(update);
             }
 
@@ -636,9 +616,9 @@
                 minutesRing = document.getElementById("rotary-minutes-ring");
                 secondsRing = document.getElementById("rotary-seconds-ring");
 
-                buildRing(hoursRing, 24, CLOCK_GEOMETRY.rotaryLabelHours, CLOCK_GEOMETRY.rotaryFontHours, "rotary-text rotary-text--hours", (value) => value.toString().padStart(2, "0"));
-                buildRing(minutesRing, 60, CLOCK_GEOMETRY.rotaryLabelMinutes, CLOCK_GEOMETRY.rotaryFontMinutes, "rotary-text rotary-text--minutes", (value) => value.toString().padStart(2, "0"));
-                buildRing(secondsRing, 60, CLOCK_GEOMETRY.rotaryLabelSeconds, CLOCK_GEOMETRY.rotaryFontSeconds, "rotary-text rotary-text--seconds", (value) => value.toString().padStart(2, "0"));
+                buildRing(hoursRing, 24, CLOCK_GEOMETRY.rotaryLabelHours, CLOCK_GEOMETRY.rotaryFontHours, "rotary-text rotary-text--hours", (value) => value.toString());
+                buildRing(minutesRing, 60, CLOCK_GEOMETRY.rotaryLabelMinutes, CLOCK_GEOMETRY.rotaryFontMinutes, "rotary-text rotary-text--minutes", (value) => value.toString());
+                buildRing(secondsRing, 60, CLOCK_GEOMETRY.rotaryLabelSeconds, CLOCK_GEOMETRY.rotaryFontSeconds, "rotary-text rotary-text--seconds", (value) => value.toString());
 
                 update();
             }
