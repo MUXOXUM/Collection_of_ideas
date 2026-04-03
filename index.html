@@ -66,7 +66,8 @@
     }
 
     .projects[data-loading="true"]::before,
-    .projects[data-empty="true"]::before {
+    .projects[data-empty="true"]::before,
+    .projects[data-error="true"]::before {
       display: block;
       padding: 14px 16px;
       border-radius: 14px;
@@ -83,6 +84,10 @@
 
     .projects[data-empty="true"]::before {
       content: "Проекты с index.html не найдены.";
+    }
+
+    .projects[data-error="true"]::before {
+      content: "Не удалось загрузить каталог проектов. Если страница открыта как файл, запусти её через локальный сервер.";
     }
 
     .topic-column {
@@ -182,8 +187,7 @@
     .readme-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      justify-content: flex-end;
       margin: 0;
       padding: 24px 24px 18px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -196,13 +200,6 @@
       overflow: auto;
       padding: 20px 24px;
       scrollbar-gutter: stable;
-    }
-
-    .readme-title {
-      margin: 0;
-      font-size: clamp(1.35rem, 1rem + 1vw, 1.8rem);
-      font-weight: 700;
-      letter-spacing: 0.01em;
     }
 
     .readme-close {
@@ -367,9 +364,8 @@
     <ol class="projects" data-loading="true"></ol>
   </main>
   <div class="readme-modal" hidden>
-    <div class="readme-dialog" role="dialog" aria-modal="true" aria-labelledby="readme-modal-title">
+    <div class="readme-dialog" role="dialog" aria-modal="true" aria-label="README">
       <div class="readme-header">
-        <h2 class="readme-title" id="readme-modal-title">README</h2>
         <button class="readme-close" type="button" aria-label="Закрыть окно">×</button>
       </div>
       <div class="readme-scroll">
@@ -381,7 +377,6 @@
     const projectsContainer = document.querySelector(".projects");
     const readmeModal = document.querySelector(".readme-modal");
     const readmeDialog = document.querySelector(".readme-dialog");
-    const readmeTitle = document.querySelector(".readme-title");
     const readmeContent = document.querySelector(".readme-content");
     const readmeCloseButton = document.querySelector(".readme-close");
 
@@ -638,7 +633,6 @@
     }
 
     function openReadmeModal(project) {
-      readmeTitle.textContent = `${project.title}`;
       readmeModal.hidden = false;
       document.body.style.overflow = "hidden";
       setReadmeContent("Загружаю README...");
@@ -710,16 +704,21 @@
       return Array.from(topics.entries());
     }
 
-    function renderProjects(projects) {
+    function renderProjects(projects, status = "ready") {
       projectsContainer.innerHTML = "";
       projectsContainer.removeAttribute("data-loading");
+      projectsContainer.removeAttribute("data-error");
+      projectsContainer.removeAttribute("data-empty");
+
+      if (status === "error") {
+        projectsContainer.setAttribute("data-error", "true");
+        return;
+      }
 
       if (!projects.length) {
         projectsContainer.setAttribute("data-empty", "true");
         return;
       }
-
-      projectsContainer.removeAttribute("data-empty");
 
       const groupedProjects = groupProjectsByTopic(projects);
       projectsContainer.style.setProperty("--topic-columns", String(groupedProjects.length || 1));
@@ -780,7 +779,7 @@
         renderProjects(Array.isArray(projects) ? projects : []);
       } catch (error) {
         console.error(error);
-        renderProjects([]);
+        renderProjects([], "error");
       }
     }
 

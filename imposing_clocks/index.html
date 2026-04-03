@@ -296,11 +296,13 @@
 
     <aside class="clock-caption" aria-live="polite">
         <h2 class="clock-caption-title" id="clock-title">24 Hour Clock</h2>
-        <p class="clock-caption-hint">← → or A / D</p>
+        <p class="clock-caption-hint" id="clock-hint"></p>
     </aside>
     <script>
         const CLOCK_DIAMETER = 400;
         const CLOCK_CENTER = CLOCK_DIAMETER / 2;
+        const MOBILE_HINT = "Tap the left and right edges of the screen to switch";
+        const DESKTOP_HINT = "← → or A / D";
         const CLOCK_GEOMETRY = {
             size: CLOCK_DIAMETER,
             center: CLOCK_CENTER,
@@ -653,6 +655,17 @@
         const ClockGallery = (() => {
             let currentIndex = 0;
             let activeClock = null;
+            let hintMediaQuery = null;
+
+            function updateHint() {
+                const hint = document.getElementById("clock-hint");
+
+                if (!hint) {
+                    return;
+                }
+
+                hint.textContent = hintMediaQuery && hintMediaQuery.matches ? MOBILE_HINT : DESKTOP_HINT;
+            }
 
             function mountCurrentClock() {
                 const root = document.getElementById("clock-view-root");
@@ -689,9 +702,32 @@
                 }
             }
 
+            function handlePointerUp(event) {
+                if (!(hintMediaQuery && hintMediaQuery.matches)) {
+                    return;
+                }
+
+                if (event.pointerType === "mouse") {
+                    return;
+                }
+
+                const screenMidpoint = window.innerWidth / 2;
+
+                if (event.clientX >= screenMidpoint) {
+                    showClock(currentIndex + 1);
+                    return;
+                }
+
+                showClock(currentIndex - 1);
+            }
+
             function init() {
+                hintMediaQuery = window.matchMedia("(max-width: 720px)");
                 mountCurrentClock();
+                updateHint();
                 window.addEventListener("keydown", handleKeydown);
+                window.addEventListener("pointerup", handlePointerUp);
+                hintMediaQuery.addEventListener("change", updateHint);
             }
 
             return { init };
