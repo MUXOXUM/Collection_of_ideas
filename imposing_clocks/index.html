@@ -612,6 +612,52 @@
             opacity: 1;
         }
 
+        .combined-clock {
+            position: relative;
+            width: min(84vw, var(--clock-diameter));
+            aspect-ratio: 1;
+            margin: 0 auto;
+            display: grid;
+            place-items: center;
+        }
+
+        .combined-clock-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .combined-clock-dial {
+            fill: rgba(255, 255, 255, 0.03);
+            stroke: rgba(245, 245, 245, 0.14);
+            stroke-width: 1.2;
+        }
+
+        .combined-orbit {
+            fill: none;
+            stroke: rgba(245, 245, 245, 0.16);
+            stroke-width: 0.9;
+        }
+
+        .combined-badge {
+            transition: none;
+        }
+
+        .combined-badge-circle {
+            fill: rgba(244, 242, 236, 0.94);
+            stroke: rgba(255, 255, 255, 0.62);
+            stroke-width: 1;
+        }
+
+        .combined-badge-text {
+            fill: rgba(18, 19, 22, 0.92);
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
         @media (max-width: 720px) {
             body {
                 padding: 16px;
@@ -644,7 +690,8 @@
 
             .rotary-clock,
             .retrograde-clock,
-            .binary-clock {
+            .binary-clock,
+            .combined-clock {
                 width: min(92vw, var(--clock-diameter));
             }
         }
@@ -727,7 +774,13 @@
             retrogradeSubdialLabelRadius: 40,
             retrogradeHourHandLength: 30,
             retrogradeSubdialCenterDotRadius: 4,
-            retrogradeReturnDuration: 180
+            retrogradeReturnDuration: 180,
+            combinedHourRadius: 162,
+            combinedMinuteRadius: 116,
+            combinedSecondRadius: 72,
+            combinedHourBadgeRadius: 16,
+            combinedMinuteBadgeRadius: 14,
+            combinedSecondBadgeRadius: 12
         };
 
         const SunCalculator = (() => {
@@ -1867,10 +1920,126 @@
             return { mount, unmount };
         }
 
+        function createCombinedClockView() {
+            const ids = {
+                hourBadge: "combined-hour-badge",
+                minuteBadge: "combined-minute-badge",
+                secondBadge: "combined-second-badge"
+            };
+            const state = {
+                frameId: null,
+                root: null
+            };
+
+            function query(id) {
+                return state.root ? state.root.querySelector(`#${id}`) : null;
+            }
+
+            function renderBadge(id, radius, label) {
+                return `
+                    <g id="${id}" class="combined-badge">
+                        <circle class="combined-badge-circle" r="${radius}"></circle>
+                        <text class="combined-badge-text">${label}</text>
+                    </g>
+                `;
+            }
+
+            function render() {
+                return `
+                    <div class="clock-wrapper">
+                        <div class="combined-clock">
+                            <svg class="combined-clock-svg" viewBox="0 0 ${CLOCK_GEOMETRY.size} ${CLOCK_GEOMETRY.size}" aria-hidden="true">
+                                <circle
+                                    class="combined-clock-dial"
+                                    cx="${CLOCK_GEOMETRY.center}"
+                                    cy="${CLOCK_GEOMETRY.center}"
+                                    r="${CLOCK_GEOMETRY.classicOuterRadius}"
+                                ></circle>
+                                <circle
+                                    class="combined-orbit"
+                                    cx="${CLOCK_GEOMETRY.center}"
+                                    cy="${CLOCK_GEOMETRY.center}"
+                                    r="${CLOCK_GEOMETRY.combinedHourRadius}"
+                                ></circle>
+                                <circle
+                                    class="combined-orbit"
+                                    cx="${CLOCK_GEOMETRY.center}"
+                                    cy="${CLOCK_GEOMETRY.center}"
+                                    r="${CLOCK_GEOMETRY.combinedMinuteRadius}"
+                                ></circle>
+                                <circle
+                                    class="combined-orbit"
+                                    cx="${CLOCK_GEOMETRY.center}"
+                                    cy="${CLOCK_GEOMETRY.center}"
+                                    r="${CLOCK_GEOMETRY.combinedSecondRadius}"
+                                ></circle>
+                                ${renderBadge(ids.hourBadge, CLOCK_GEOMETRY.combinedHourBadgeRadius, "0")}
+                                ${renderBadge(ids.minuteBadge, CLOCK_GEOMETRY.combinedMinuteBadgeRadius, "00")}
+                                ${renderBadge(ids.secondBadge, CLOCK_GEOMETRY.combinedSecondBadgeRadius, "00")}
+                            </svg>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function setBadge(id, radius, angle, text) {
+                const badge = query(id);
+                const point = polarToCartesian(radius, angle);
+                badge.setAttribute("transform", `translate(${point.x} ${point.y})`);
+                badge.querySelector("text").textContent = text;
+            }
+
+            function update() {
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes();
+                const secondsBucket = Math.floor(now.getSeconds() / 5) * 5;
+
+                setBadge(
+                    ids.hourBadge,
+                    CLOCK_GEOMETRY.combinedHourRadius,
+                    getCircleAngle(hours, 24),
+                    hours.toString()
+                );
+                setBadge(
+                    ids.minuteBadge,
+                    CLOCK_GEOMETRY.combinedMinuteRadius,
+                    getCircleAngle(minutes, 60),
+                    minutes.toString().padStart(2, "0")
+                );
+                setBadge(
+                    ids.secondBadge,
+                    CLOCK_GEOMETRY.combinedSecondRadius,
+                    getCircleAngle(secondsBucket, 60),
+                    secondsBucket.toString().padStart(2, "0")
+                );
+
+                state.frameId = window.requestAnimationFrame(update);
+            }
+
+            function mount(root) {
+                state.root = root;
+                root.innerHTML = render();
+                update();
+            }
+
+            function unmount() {
+                if (state.frameId) {
+                    window.cancelAnimationFrame(state.frameId);
+                    state.frameId = null;
+                }
+
+                state.root = null;
+            }
+
+            return { mount, unmount };
+        }
+
         const TwentyFourHourClockView = createTwentyFourHourClockView();
         const RotaryDialClockView = createRotaryDialClockView();
         const RetrogradeClockView = createRetrogradeClockView();
         const BinaryClockView = createBinaryClockView();
+        const CombinedClockView = createCombinedClockView();
 
         const clockViews = [
             {
@@ -1888,6 +2057,10 @@
             {
                 title: "Binary Clock",
                 ...BinaryClockView
+            },
+            {
+                title: "Orbit Like Clock",
+                ...CombinedClockView
             }
         ];
 
