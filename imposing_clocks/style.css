@@ -610,6 +610,8 @@ body {
     width: 100%;
     height: 100%;
     overflow: visible;
+    shape-rendering: geometricPrecision;
+    text-rendering: geometricPrecision;
 }
 
 .combined-clock-dial {
@@ -641,6 +643,8 @@ body {
     font-weight: 600;
     text-anchor: middle;
     dominant-baseline: middle;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
 }
 
 @media (max-width: 720px) {

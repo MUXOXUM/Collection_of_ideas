@@ -1205,21 +1205,37 @@ function createBinaryClockView() {
 
 function createCombinedClockView() {
     const ids = {
-        hourBadge: "combined-hour-badge",
-        minuteBadge: "combined-minute-badge",
-        secondBadge: "combined-second-badge"
+        hourRotor: "combined-hour-rotor",
+        minuteRotor: "combined-minute-rotor",
+        secondRotor: "combined-second-rotor",
+        hourCounter: "combined-hour-counter",
+        minuteCounter: "combined-minute-counter",
+        secondCounter: "combined-second-counter",
+        hourText: "combined-hour-text",
+        minuteText: "combined-minute-text",
+        secondText: "combined-second-text"
     };
     const state = {
         frameId: null,
-        root: null
+        root: null,
+        startTimeMs: 0,
+        startPerfMs: 0,
+        lastHourLabel: null,
+        lastMinuteLabel: null,
+        lastSecondLabel: null
     };
     const query = createRootQuery(state);
 
-    function renderBadge(id, radius, label) {
+    function renderBadge(rotorId, counterId, textId, orbitRadius, badgeRadius, label) {
+        const badgeY = CLOCK_GEOMETRY.center - orbitRadius;
         return `
-            <g id="${id}" class="combined-badge">
-                <circle class="combined-badge-circle" r="${radius}"></circle>
-                <text class="combined-badge-text">${label}</text>
+            <g id="${rotorId}" class="combined-badge-rotor">
+                <g transform="translate(${CLOCK_GEOMETRY.center} ${badgeY})">
+                    <circle class="combined-badge-circle" r="${badgeRadius}"></circle>
+                    <g id="${counterId}" class="combined-badge-counter">
+                        <text id="${textId}" class="combined-badge-text">${label}</text>
+                    </g>
+                </g>
             </g>
         `;
     }
@@ -1253,50 +1269,103 @@ function createCombinedClockView() {
                             cy="${CLOCK_GEOMETRY.center}"
                             r="${CLOCK_GEOMETRY.combinedSecondRadius}"
                         ></circle>
-                        ${renderBadge(ids.hourBadge, CLOCK_GEOMETRY.combinedHourBadgeRadius, "0")}
-                        ${renderBadge(ids.minuteBadge, CLOCK_GEOMETRY.combinedMinuteBadgeRadius, "00")}
-                        ${renderBadge(ids.secondBadge, CLOCK_GEOMETRY.combinedSecondBadgeRadius, "00")}
+                        ${renderBadge(
+                            ids.hourRotor,
+                            ids.hourCounter,
+                            ids.hourText,
+                            CLOCK_GEOMETRY.combinedHourRadius,
+                            CLOCK_GEOMETRY.combinedHourBadgeRadius,
+                            "0"
+                        )}
+                        ${renderBadge(
+                            ids.minuteRotor,
+                            ids.minuteCounter,
+                            ids.minuteText,
+                            CLOCK_GEOMETRY.combinedMinuteRadius,
+                            CLOCK_GEOMETRY.combinedMinuteBadgeRadius,
+                            "00"
+                        )}
+                        ${renderBadge(
+                            ids.secondRotor,
+                            ids.secondCounter,
+                            ids.secondText,
+                            CLOCK_GEOMETRY.combinedSecondRadius,
+                            CLOCK_GEOMETRY.combinedSecondBadgeRadius,
+                            "00"
+                        )}
                     </svg>
                 </div>
             </div>
         `;
     }
 
-    function setBadge(id, radius, angle, text) {
-        const badge = query(id);
-        const point = polarToCartesian(radius, angle);
-        badge.setAttribute("transform", `translate(${point.x} ${point.y})`);
-        badge.querySelector("text").textContent = text;
+    function setBadge(rotorId, counterId, textId, degrees, text, previousTextKey) {
+        const rotor = query(rotorId);
+        const counter = query(counterId);
+        const textNode = query(textId);
+
+        if (!rotor || !counter || !textNode) {
+            return;
+        }
+
+        setRotation(rotor, degrees);
+        setRotation(counter, -degrees, 0, 0);
+
+        if (state[previousTextKey] !== text) {
+            textNode.textContent = text;
+            state[previousTextKey] = text;
+        }
+    }
+
+    function getAnimatedTimeParts() {
+        const elapsed = performance.now() - state.startPerfMs;
+        const now = new Date(state.startTimeMs + elapsed);
+        const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
+        const minutes = now.getMinutes() + seconds / 60;
+        const hours24 = now.getHours() + minutes / 60;
+
+        return { now, seconds, minutes, hours24 };
     }
 
     function update() {
-        const { now } = getCurrentTimeParts();
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        const secondsBucket = Math.floor(now.getSeconds() / 5) * 5;
+        const { now, seconds, minutes, hours24 } = getAnimatedTimeParts();
+        const displayHours = now.getHours();
+        const displayMinutes = now.getMinutes();
+        const displaySeconds = now.getSeconds();
 
         setBadge(
-            ids.hourBadge,
-            CLOCK_GEOMETRY.combinedHourRadius,
-            getCircleAngle(hours, 24),
-            hours.toString()
+            ids.hourRotor,
+            ids.hourCounter,
+            ids.hourText,
+            (hours24 / 24) * 360,
+            displayHours.toString(),
+            "lastHourLabel"
         );
         setBadge(
-            ids.minuteBadge,
-            CLOCK_GEOMETRY.combinedMinuteRadius,
-            getCircleAngle(minutes, 60),
-            minutes.toString().padStart(2, "0")
+            ids.minuteRotor,
+            ids.minuteCounter,
+            ids.minuteText,
+            (minutes / 60) * 360,
+            displayMinutes.toString().padStart(2, "0"),
+            "lastMinuteLabel"
         );
         setBadge(
-            ids.secondBadge,
-            CLOCK_GEOMETRY.combinedSecondRadius,
-            getCircleAngle(secondsBucket, 60),
-            secondsBucket.toString().padStart(2, "0")
+            ids.secondRotor,
+            ids.secondCounter,
+            ids.secondText,
+            (seconds / 60) * 360,
+            displaySeconds.toString().padStart(2, "0"),
+            "lastSecondLabel"
         );
     }
 
     function mount(root) {
         state.root = root;
+        state.startTimeMs = Date.now();
+        state.startPerfMs = performance.now();
+        state.lastHourLabel = null;
+        state.lastMinuteLabel = null;
+        state.lastSecondLabel = null;
         root.innerHTML = render();
         runAnimationLoop(state, update);
     }
