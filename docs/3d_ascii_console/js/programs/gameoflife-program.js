@@ -29,15 +29,15 @@ function getHelpLines() {
     "opens a toroidal Conway's Game of Life editor.",
     "",
     "edit mode:",
-    "- lmb toggles a cell",
+    "- lmb fills a cell",
     "- rmb clears a cell",
     "- del clears the full field",
-    "- home fills the field randomly",
+    "- r fills the field randomly",
     "- enter starts simulation",
     "- esc returns to shell",
     "",
     "run mode:",
-    "- ins returns to editor",
+    "- e returns to editor",
     "- esc returns to shell",
     ""
   ];
@@ -103,12 +103,16 @@ function render(programState, ctx) {
   const visibleCols = Math.min(metrics.fieldCols, state.cols);
   const visibleRows = Math.min(metrics.fieldRows, state.rows);
   const frameWidth = visibleCols + 2;
-  const longestFooter = state.running
-    ? Math.max(`generation: ${state.generation} | population: ${state.population}`.length, "Edit - INS | Exit - ESC".length)
-    : Math.max(
-      "Change state - LMB | Clear - RMB".length,
-      "Clear all - DEL | Random fill - HOME | Start - Enter | Exit - ESC".length
-    );
+  const footerLines = state.running
+    ? buildFooterLines([
+      [`Generation: ${state.generation}`, `Edit - E`],
+      [`Population: ${state.population}`, `Exit - ESC`]
+    ])
+    : buildFooterLines([
+      ["Fill cell - LMB", "Random fill - R", "Start - Enter"],
+      ["Clear cell - RMB", "Clear all - DEL", "Exit - ESC"]
+    ]);
+  const longestFooter = footerLines.reduce((max, line) => Math.max(max, line.length), 0);
   const blockWidth = Math.max(frameWidth, longestFooter);
   const blockHeight = visibleRows + 5;
   const topInset = Math.max(UI_INSET_TOP, Math.floor((ctx.viewportRows - blockHeight) / 2));
@@ -136,14 +140,9 @@ function render(programState, ctx) {
   }
   lines.push(`${leftPadding}+${"-".repeat(visibleCols)}+`);
   lines.push("");
-
-  if (state.running) {
-    lines.push(renderFooterLine(`generation: ${state.generation} | population: ${state.population}`, visibleCols, leftPadding));
-    lines.push(renderFooterLine("Edit - INS | Exit - ESC", visibleCols, leftPadding));
-  } else {
-    lines.push(renderFooterLine("Change state - LMB | Clear - RMB", visibleCols, leftPadding));
-    lines.push(renderFooterLine("Clear all - DEL | Random fill - HOME | Start - Enter | Exit - ESC", visibleCols, leftPadding));
-  }
+  footerLines.forEach((line) => {
+    lines.push(renderFooterLine(line, blockWidth, leftPadding));
+  });
 
   state.viewport = {
     originX: leftInset + 1,
@@ -197,12 +196,14 @@ function tick(programState, ctx, timestamp) {
 
 function onKeyDown(programState, ctx, event) {
   if (event.key === "Escape") {
+    event.preventDefault();
     exitToShell(programState, ctx);
     return;
   }
 
   if (programState.running) {
-    if (event.key === "Insert") {
+    if (event.key === "e" || event.key === "E" || event.key === "у" || event.key === "У" || event.key === "Insert") {
+      event.preventDefault();
       programState.running = false;
       programState.lastStepAt = 0;
       ctx.persistProgramState("gameoflife");
@@ -211,16 +212,19 @@ function onKeyDown(programState, ctx, event) {
   }
 
   if (event.key === "Delete") {
+    event.preventDefault();
     clearBoard(programState, ctx);
     return;
   }
 
-  if (event.key === "Home") {
+  if (event.key === "r" || event.key === "R" || event.key === "к" || event.key === "К" || event.key === "Home") {
+    event.preventDefault();
     randomizeBoard(programState, ctx);
     return;
   }
 
   if (event.key === "Enter") {
+    event.preventDefault();
     programState.running = true;
     programState.lastStepAt = performance.now();
     programState.generation = 0;
@@ -241,8 +245,10 @@ function onPointerDown(programState, ctx, event) {
   if (event.button === 0) {
     const cellIndex = target.row * programState.cols + target.col;
     const nextAlive = programState.cells[cellIndex] === 0;
-    programState.pointerAction = nextAlive ? "draw" : "erase";
-    setCell(programState, ctx, target.col, target.row, nextAlive);
+    programState.pointerAction = "draw";
+    if (nextAlive) {
+      setCell(programState, ctx, target.col, target.row, true);
+    }
     return;
   }
 
@@ -253,7 +259,7 @@ function onPointerDown(programState, ctx, event) {
 }
 
 function onPointerMove(programState, ctx, event) {
-  if (!programState.pointerAction || programState.running) {
+  if (programState.running) {
     return;
   }
 
@@ -264,6 +270,11 @@ function onPointerMove(programState, ctx, event) {
 
   programState.cursorX = target.col;
   programState.cursorY = target.row;
+
+  if (!programState.pointerAction) {
+    return;
+  }
+
   setCell(programState, ctx, target.col, target.row, programState.pointerAction === "draw");
 }
 
@@ -287,6 +298,47 @@ function renderFooterLine(text, width, leftPadding) {
   }
   const offset = Math.floor((width - text.length) / 2);
   return `${leftPadding}${" ".repeat(offset)}${text}`;
+}
+
+function buildFooterLines(rows) {
+  const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+  const columnWidths = new Array(columnCount).fill(0);
+  const labelWidths = new Array(columnCount).fill(0);
+  const parsedRows = rows.map((row) => row.map(parseFooterCell));
+
+  parsedRows.forEach((row) => {
+    row.forEach((cell, index) => {
+      labelWidths[index] = Math.max(labelWidths[index], cell.label.length);
+    });
+  });
+
+  const formattedRows = parsedRows.map((row) => row.map((cell, index) => {
+    if (!cell.shortcut) {
+      return cell.label;
+    }
+    return `${cell.label.padEnd(labelWidths[index], " ")} - ${cell.shortcut}`;
+  }));
+
+  formattedRows.forEach((row) => {
+    row.forEach((cell, index) => {
+      columnWidths[index] = Math.max(columnWidths[index], cell.length);
+    });
+  });
+
+  return formattedRows.map((row) => row
+    .map((cell, index) => cell.padEnd(columnWidths[index], " "))
+    .join(" | "));
+}
+
+function parseFooterCell(cell) {
+  const parts = cell.split(" - ");
+  if (parts.length !== 2) {
+    return { label: cell, shortcut: "" };
+  }
+  return {
+    label: parts[0],
+    shortcut: parts[1]
+  };
 }
 
 function getGameOfLifeMetrics(ctx) {

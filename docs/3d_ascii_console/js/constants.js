@@ -1,4 +1,3 @@
-export const CHAR_ASPECT = 0.56;
 export const PALETTE = " .,-~:;=!*#$@";
 export const AUTO_RESUME_MS = 0;
 export const DEFAULT_PROMPT = "root@host ~> ";
@@ -11,6 +10,7 @@ export const STORAGE_KEYS = {
   gameOfLife: "ascii_os_game_of_life_state",
   history: "ascii_os_command_history",
   render3d: "ascii_os_render3d_state",
+  snake: "ascii_os_snake_state",
   shell: "ascii_os_shell_screen",
   ui: "ascii_os_ui_state"
 };

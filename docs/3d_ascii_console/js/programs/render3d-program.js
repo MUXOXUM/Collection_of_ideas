@@ -1,6 +1,5 @@
 import {
   AUTO_RESUME_MS,
-  CHAR_ASPECT,
   DEFAULT_VIEW_STATE,
   DRAG_BUTTON,
   PALETTE,
@@ -59,11 +58,13 @@ function createState() {
     mode: "menu",
     figures: cloneFigures(),
     menuIndex: 0,
+    helpVisible: false,
     sliderIndex: 0,
     settingsVisible: false,
     currentFigureId: null,
     renderCols: 100,
     renderRows: 28,
+    charAspect: 0.5,
     userQuat: quatIdentity(),
     autoQuat: quatIdentity(),
     panX: 0,
@@ -84,6 +85,7 @@ function restoreState(savedState, options = {}) {
   if (savedState && typeof savedState === "object") {
     state.mode = savedState.mode === "render" ? "render" : "menu";
     state.menuIndex = typeof savedState.menuIndex === "number" ? Math.floor(savedState.menuIndex) : 0;
+    state.helpVisible = Boolean(savedState.helpVisible);
     state.sliderIndex = typeof savedState.sliderIndex === "number" ? Math.floor(savedState.sliderIndex) : 0;
     state.settingsVisible = Boolean(savedState.settingsVisible);
     state.currentFigureId = typeof savedState.currentFigureId === "string" ? savedState.currentFigureId : null;
@@ -104,6 +106,7 @@ function restoreState(savedState, options = {}) {
   if (!figure) {
     state.mode = "menu";
     state.currentFigureId = null;
+    state.helpVisible = false;
     state.settingsVisible = false;
     state.sliderIndex = 0;
   } else {
@@ -117,6 +120,7 @@ function serializeState(state) {
   return {
     mode: state.mode,
     menuIndex: state.menuIndex,
+    helpVisible: state.helpVisible,
     sliderIndex: state.sliderIndex,
     settingsVisible: state.settingsVisible,
     currentFigureId: state.currentFigureId,
@@ -131,10 +135,6 @@ function serializeState(state) {
 
 function getHelpLines() {
   return [
-    "",
-    "usage: render3d",
-    "",
-    "opens the figure selection screen.",
     "",
     "+----------------+-------------------+",
     "| Menu key       | Action            |",
@@ -170,6 +170,7 @@ function getHelpLines() {
 function enter(state, ctx) {
   state.mode = "menu";
   state.currentFigureId = null;
+  state.helpVisible = false;
   state.settingsVisible = false;
   state.sliderIndex = 0;
   ctx.setActiveProgram("render3d");
@@ -294,17 +295,28 @@ function renderMenuView(state, ctx) {
   });
 
   lines.push("+----+-------------------------------+");
+  lines.push("");
+  lines.push("H for help");
   const width = Math.max(...lines.map((line) => line.length), 0);
   const height = lines.length;
   const topInset = Math.max(UI_INSET_TOP, Math.floor((ctx.viewportRows - height) / 2));
   const leftInset = Math.max(UI_INSET_LEFT, Math.floor((ctx.viewportCols - width) / 2));
-  return insetTextLines(lines, topInset, leftInset).join("\n");
+
+  if (!state.helpVisible) {
+    return insetTextLines(lines, topInset, leftInset).join("\n");
+  }
+
+  const canvas = createTextCanvas(ctx.viewportCols, ctx.viewportRows);
+  drawTextBlock(canvas, leftInset, topInset, lines);
+  overlayHelpBox(canvas, getHelpLines());
+  return canvas.join("\n");
 }
 
 function renderRenderView(state, ctx) {
   const reservedRows = 0;
   state.renderRows = Math.max(12, ctx.viewportRows - reservedRows);
   state.renderCols = Math.max(42, ctx.viewportCols);
+  state.charAspect = ctx.charAspect;
 
   const frame = createFrameBuffer(state.renderCols, state.renderRows);
   renderCurrentFigure(state, frame);
@@ -587,7 +599,7 @@ function projectPoint(state, point) {
   const scale = Math.min(state.renderCols, state.renderRows) * 0.72;
   const centerX = (state.renderCols - 1) / 2;
   const centerY = (state.renderRows - 1) / 2;
-  const x = centerX + ((point[0] + state.panX) * scale) / (depth * CHAR_ASPECT);
+  const x = centerX + ((point[0] + state.panX) * scale) / (depth * getCharAspect(state));
   const y = centerY - ((point[1] + state.panY) * scale) / depth;
   return { x, y, depth };
 }
@@ -681,7 +693,7 @@ function getCameraRay(state, sampleX, sampleY) {
   const scale = Math.min(state.renderCols, state.renderRows) * 0.72;
   const centerX = (state.renderCols - 1) / 2;
   const centerY = (state.renderRows - 1) / 2;
-  const screenX = ((sampleX - centerX) * CHAR_ASPECT) / scale;
+  const screenX = ((sampleX - centerX) * getCharAspect(state)) / scale;
   const screenY = (centerY - sampleY) / scale;
   return { origin: getCameraOrigin(state), direction: normalizeVec3([screenX, screenY, 1]) };
 }
@@ -760,6 +772,22 @@ function sampleMobiusStripSurface(u, v, size) {
 }
 
 function handleMenuKeys(state, ctx, event) {
+  if (event.key === "h" || event.key === "H" || event.key === "р" || event.key === "Р") {
+    state.helpVisible = !state.helpVisible;
+    ctx.persistProgramState("render3d");
+    return;
+  }
+
+  if (state.helpVisible && event.key === "Escape") {
+    state.helpVisible = false;
+    ctx.persistProgramState("render3d");
+    return;
+  }
+
+  if (state.helpVisible) {
+    return;
+  }
+
   if (event.key === "ArrowUp") {
     state.menuIndex = (state.menuIndex - 1 + state.figures.length) % state.figures.length;
     ctx.persistProgramState("render3d");
@@ -787,7 +815,7 @@ function handleMenuKeys(state, ctx, event) {
 
 function handleRenderKeys(state, ctx, event) {
   const figure = getCurrentFigure(state);
-  if (event.key === "m" || event.key === "M") {
+  if (event.key === "m" || event.key === "M" || event.key === "ь" || event.key === "Ь") {
     state.settingsVisible = !state.settingsVisible;
     ctx.persistProgramState("render3d");
     return;
@@ -837,11 +865,69 @@ function handleRenderKeys(state, ctx, event) {
 function startFigure(state, ctx, figureId) {
   state.currentFigureId = figureId;
   state.mode = "render";
+  state.helpVisible = false;
   state.sliderIndex = 0;
   state.settingsVisible = false;
   resetView(state);
   ctx.persistProgramState("render3d");
   ctx.persistUiState();
+}
+
+function createTextCanvas(width, height) {
+  return new Array(height).fill(null).map(() => " ".repeat(Math.max(0, width)));
+}
+
+function drawTextBlock(canvas, startX, startY, lines) {
+  lines.forEach((line, index) => {
+    const y = startY + index;
+    if (y < 0 || y >= canvas.length) {
+      return;
+    }
+    canvas[y] = replaceAt(canvas[y], startX, line);
+  });
+}
+
+function overlayHelpBox(canvas, content) {
+  const normalized = content.filter((line, index, source) => {
+    if (index === 0 || index === source.length - 1) {
+      return line.trim().length > 0;
+    }
+    return true;
+  });
+  const innerWidth = Math.max(...normalized.map((line) => line.length), 20);
+  const boxWidth = Math.min(canvas[0].length - 2, innerWidth + 4);
+  const boxHeight = Math.min(canvas.length - 2, normalized.length + 2);
+  const startX = Math.max(0, Math.floor((canvas[0].length - boxWidth) / 2));
+  const startY = Math.max(0, Math.floor((canvas.length - boxHeight) / 2));
+  const border = `+${"-".repeat(Math.max(0, boxWidth - 2))}+`;
+
+  canvas[startY] = replaceAt(canvas[startY], startX, border);
+  for (let row = 1; row < boxHeight - 1; row += 1) {
+    canvas[startY + row] = replaceAt(
+      canvas[startY + row],
+      startX,
+      `|${" ".repeat(Math.max(0, boxWidth - 2))}|`
+    );
+  }
+  canvas[startY + boxHeight - 1] = replaceAt(canvas[startY + boxHeight - 1], startX, border);
+
+  normalized.slice(0, Math.max(0, boxHeight - 2)).forEach((line, index) => {
+    canvas[startY + 1 + index] = replaceAt(
+      canvas[startY + 1 + index],
+      startX + 2,
+      line.slice(0, Math.max(0, boxWidth - 4))
+    );
+  });
+}
+
+function replaceAt(line, startX, fragment) {
+  if (startX >= line.length || fragment.length === 0) {
+    return line;
+  }
+  const prefix = line.slice(0, Math.max(0, startX));
+  const clipped = fragment.slice(0, Math.max(0, line.length - startX));
+  const suffix = line.slice(startX + clipped.length);
+  return `${prefix}${clipped}${suffix}`;
 }
 
 function resetView(state) {
@@ -914,6 +1000,10 @@ function getLightDirection(state) {
 
 function getAmbientLight(state) {
   return clamp(0, 0.8, getSliderValue(state, "ambient"));
+}
+
+function getCharAspect(state) {
+  return clamp(0.1, 2, state.charAspect || 0.5);
 }
 
 function getSphereRenderResolution(state) {

@@ -21,6 +21,7 @@ export function createAppState(programs) {
     activeProgramId: null,
     viewportCols: 120,
     viewportRows: 44,
+    charAspect: 0.5,
     animationFrame: 0,
     lastTimestamp: 0,
     measureSpan: null,

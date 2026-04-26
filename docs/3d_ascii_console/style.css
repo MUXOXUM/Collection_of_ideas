@@ -92,7 +92,7 @@ body {
   white-space: pre;
   overflow: hidden;
   user-select: none;
-  line-height: 1;
+  line-height: 1.2;
   font-size: clamp(9px, 1.1vw, 14px);
   cursor: default;
 }

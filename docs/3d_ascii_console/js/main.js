@@ -6,6 +6,7 @@ import {
 import { createAppState } from "./app-state.js";
 import { createGameOfLifeProgram } from "./programs/gameoflife-program.js";
 import { createRender3DProgram } from "./programs/render3d-program.js";
+import { createSnakeProgram } from "./programs/snake-program.js";
 import { createProgramRegistry } from "./program-registry.js";
 import {
   buildPrompt,
@@ -19,7 +20,8 @@ import { clearStorageKey, readStorageJson, writeStorageJson } from "./storage.js
 const terminal = document.getElementById("terminal");
 const registry = createProgramRegistry([
   createRender3DProgram(),
-  createGameOfLifeProgram()
+  createGameOfLifeProgram(),
+  createSnakeProgram()
 ]);
 const state = createAppState(registry.list);
 const ctx = createAppContext();
@@ -58,6 +60,9 @@ function createAppContext() {
     get viewportRows() {
       return state.viewportRows;
     },
+    get charAspect() {
+      return state.charAspect;
+    },
     get measureSpan() {
       return state.measureSpan;
     },
@@ -89,7 +94,9 @@ function createMeasureNode() {
   span.style.visibility = "hidden";
   span.style.pointerEvents = "none";
   span.style.whiteSpace = "pre";
-  span.style.font = getComputedStyle(terminal).font;
+  const style = getComputedStyle(terminal);
+  span.style.font = style.font;
+  span.style.lineHeight = style.lineHeight;
   document.body.appendChild(span);
   state.measureSpan = span;
 }
@@ -101,6 +108,7 @@ function handleResize() {
 
   const style = getComputedStyle(terminal);
   state.measureSpan.style.font = style.font;
+  state.measureSpan.style.lineHeight = style.lineHeight;
   const charRect = state.measureSpan.getBoundingClientRect();
   const rect = terminal.getBoundingClientRect();
   const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
@@ -111,6 +119,7 @@ function handleResize() {
   const contentHeight = Math.max(0, rect.height - paddingY);
   state.viewportCols = Math.max(52, Math.floor(contentWidth / charWidth));
   state.viewportRows = Math.max(26, Math.floor(contentHeight / charHeight));
+  state.charAspect = charWidth / charHeight;
   trimShellBuffer(state.shell, ctx);
   renderScreen();
 }
@@ -129,7 +138,10 @@ function tick(timestamp) {
 function renderScreen() {
   const activeProgram = getActiveProgram();
   if (!activeProgram) {
-    terminal.textContent = renderShellView(state.shell);
+    terminal.textContent = renderShellView(state.shell, {
+      showCaret: document.activeElement === terminal,
+      timestamp: state.lastTimestamp
+    });
     return;
   }
 

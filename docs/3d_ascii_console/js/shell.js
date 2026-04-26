@@ -1,4 +1,5 @@
 import {
+  CARET_BLINK_MS,
   COMMAND_HISTORY_LIMIT,
   DEFAULT_PROMPT,
   NAMED_COLORS,
@@ -8,10 +9,11 @@ import {
 } from "./constants.js";
 import { insetTextLines } from "./text-utils.js";
 
-export function renderShellView(shellState) {
+export function renderShellView(shellState, options = {}) {
+  const { showCaret = false, timestamp = 0 } = options;
   const lines = [];
   lines.push(...shellState.lines);
-  lines.push(`${shellState.prompt}${shellState.input}`);
+  lines.push(`${shellState.prompt}${shellState.input}${getCaretChar(showCaret, timestamp)}`);
   return insetTextLines(lines, UI_INSET_TOP, UI_INSET_LEFT).join("\n");
 }
 
@@ -132,12 +134,6 @@ function executeShellCommand(shellState, ctx, command, args) {
     return false;
   }
 
-  if (hasHelpFlag(args)) {
-    appendShellLines(shellState, program.getHelpLines());
-    trimShellBuffer(shellState, ctx);
-    return true;
-  }
-
   ctx.openProgram(program.id, args);
   return true;
 }
@@ -178,17 +174,32 @@ function appendShellLines(shellState, lines) {
   shellState.lines.push(...lines);
 }
 
+function getCaretChar(showCaret, timestamp) {
+  if (!showCaret) {
+    return " ";
+  }
+  return Math.floor(timestamp / CARET_BLINK_MS) % 2 === 0 ? "_" : " ";
+}
+
 function getHelpLines(programs) {
-  const rows = [
+  const utilityRows = [
     ["help", "", "show this help"],
     ["pwd", "", "show current pathname"],
-    ...programs.map((program) => [program.command, "-h", program.description]),
     ["sysinfo", "", "show browser system info"],
     ["clear", "", "clear terminal text"],
     ["color", "-h", "change text/background colors"],
     ["reboot", "", "clear saved browser data"]
   ];
+  const commandRows = programs.map((program) => [program.command, "", program.description]);
 
+  return [
+    ...buildHelpTable(commandRows),
+    "",
+    ...buildHelpTable(utilityRows)
+  ];
+}
+
+function buildHelpTable(rows) {
   const commandWidth = Math.max("Command".length, ...rows.map(([command]) => command.length));
   const flagsWidth = Math.max("Flags".length, ...rows.map(([, flags]) => flags.length));
   const descriptionWidth = Math.max("Description".length, ...rows.map(([, , description]) => description.length));
